@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0.70"
 clap = { version = "4.2.1", features = ["derive"] }
+tokio = { version = "1.27.0", features = [ "io-util", "net", "macros", "rt", "rt-multi-thread" ] }
