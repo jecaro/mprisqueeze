@@ -1,4 +1,7 @@
 [package]
-name = "hello-world"
+name = "slimpris"
 version = "0.1.0"
 edition = "2018"
+
+[dependencies]
+clap = { version = "4.2.1", features = ["derive"] }
