@@ -15,22 +15,36 @@ struct Options {
     port: u16,
 }
 
+async fn open_connection(server: &String, port: u16) -> anyhow::Result<BufReader<TcpStream>> {
+    let address = format!("{}:{}", server, port);
+    let stream = TcpStream::connect(address).await?;
+    Ok(BufReader::new(stream))
+}
+
+fn read_line_as_bytes(buf: &mut dyn BufRead) -> anyhow::Result<Vec<u8>> {
+    let mut line: Vec<u8> = Vec::new();
+    buf.read_until(b'\n', &mut line)?;
+    Ok(line)
+}
+
+async fn get_reply(reader: &mut BufReader<TcpStream>) -> anyhow::Result<String> {
+    let mut reply = String::new();
+    reader.read_line(&mut reply).await?;
+    Ok(reply)
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let options = Options::parse();
 
-    let address = format!("{}:{}", options.server, options.port);
-    let stream = TcpStream::connect(address).await?;
-    let mut reader = BufReader::new(stream);
+    let mut reader = open_connection(&options.server, options.port).await?;
 
     loop {
-        let mut buf: Vec<u8> = Vec::new();
-        io::stdin().lock().read_until(b'\n', &mut buf)?;
+        let line = read_line_as_bytes(&mut io::stdin().lock())?;
 
-        reader.write_all(&buf).await?;
+        reader.write_all(&line).await?;
 
-        let mut reply = String::new();
-        reader.read_line(&mut reply).await?;
+        let reply = get_reply(&mut reader).await?;
         print!("{reply}");
     }
 }
