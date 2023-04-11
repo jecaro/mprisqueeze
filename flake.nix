@@ -21,6 +21,8 @@
         # For `nix build` & `nix run`:
         defaultPackage = naersk'.buildPackage {
           src = ./.;
+          nativeBuildInputs = with pkgs; [ pkg-config ];
+          buildInputs = with pkgs; [ openssl ];
         };
 
         # For `nix develop`:
@@ -28,6 +30,8 @@
           nativeBuildInputs = with pkgs;
             [
               cargo
+              openssl
+              pkg-config
               rust-analyzer
               rustc
               rustfmt
