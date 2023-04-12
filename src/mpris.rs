@@ -75,31 +75,18 @@ struct MprisPlayer {
 
 #[dbus_interface(name = "org.mpris.MediaPlayer2.Player")]
 impl MprisPlayer {
-    async fn next(&self) {
-        println!("next");
-    }
-    async fn previous(&self) {
-        println!("previous");
-    }
-    async fn pause(&self) {
-        println!("pause");
-    }
-    async fn play_pause(&self) {
-        println!("play_pause");
-    }
-    async fn stop(&self) {
-        println!("stop");
-    }
-    async fn play(&self) {
-        println!("play");
-    }
+    async fn next(&self) { }
+    async fn previous(&self) { }
+    async fn pause(&self) { }
+    async fn play_pause(&self) { }
+    async fn stop(&self) { }
+    async fn play(&self) { }
     async fn seek(&self, _offset: i64) {}
     async fn set_position(&self, _track_id: String, _position: i64) {}
     async fn open_uri(&self, _uri: String) {}
 
     #[dbus_interface(property)]
     async fn playback_status(&self) -> String {
-        println!("playback_status");
         let mode = self
             .client
             .get_mode(self.player_name.clone())
@@ -114,7 +101,6 @@ impl MprisPlayer {
     }
     #[dbus_interface(property)]
     async fn loop_status(&self) -> String {
-        println!("loop_status");
         "None".to_string()
     }
     #[dbus_interface(property)]
@@ -123,7 +109,6 @@ impl MprisPlayer {
     }
     #[dbus_interface(property)]
     async fn shuffle(&self) -> bool {
-        println!("shuffle");
         let shuffle = self
             .client
             .get_shuffle(self.player_name.clone())
@@ -134,7 +119,6 @@ impl MprisPlayer {
     }
     #[dbus_interface(property)]
     async fn metadata(&self) -> HashMap<String, Value> {
-        println!("metadata");
         let current_title = self
             .client
             .get_current_title(self.player_name.clone())
@@ -154,52 +138,42 @@ impl MprisPlayer {
     }
     #[dbus_interface(property)]
     async fn volume(&self) -> f64 {
-        println!("volume");
         1.0
     }
     #[dbus_interface(property)]
     async fn position(&self) -> i64 {
-        println!("position");
         0
     }
     #[dbus_interface(property)]
     async fn minimum_rate(&self) -> f64 {
-        println!("minimum_rate");
         1.0
     }
     #[dbus_interface(property)]
     async fn maximum_rate(&self) -> f64 {
-        println!("maximum_rate");
         1.0
     }
     #[dbus_interface(property)]
     async fn can_go_next(&self) -> bool {
-        println!("can_go_next");
         true
     }
     #[dbus_interface(property)]
     async fn can_go_previous(&self) -> bool {
-        println!("can_go_previous");
         true
     }
     #[dbus_interface(property)]
     async fn can_play(&self) -> bool {
-        println!("can_play");
         true
     }
     #[dbus_interface(property)]
     async fn can_pause(&self) -> bool {
-        println!("can_pause");
         true
     }
     #[dbus_interface(property)]
     async fn can_seek(&self) -> bool {
-        println!("can_seek");
         false
     }
     #[dbus_interface(property)]
     async fn can_control(&self) -> bool {
-        println!("can_control");
         true
     }
 }
