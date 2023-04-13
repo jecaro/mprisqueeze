@@ -57,6 +57,13 @@ impl LmsClient {
         as_bool(&lms_response, &key)
     }
 
+    pub async fn get_index(&self, name: String) -> Result<u16> {
+        let (request, key) = LmsRequest::index(name);
+        let response = self.post(&request).await?;
+        let lms_response = response.json().await?;
+        as_u16(&lms_response, &key)
+    }
+
     pub async fn get_shuffle(&self, name: String) -> Result<Shuffle> {
         let (request, key) = LmsRequest::shuffle(name);
         let response = self.post(&request).await?;
@@ -120,7 +127,8 @@ impl LmsRequest {
 
     fn version() -> (Self, String) {
         let key = "version".to_string();
-        (Self::question(Self::new("".to_string(), vec![&key])), key)
+        let request = Self::new("".to_string(), vec![&key]).question();
+        (request, key)
     }
 
     fn question(mut self) -> Self {
@@ -130,30 +138,39 @@ impl LmsRequest {
 
     fn connected(name: String) -> (Self, String) {
         let key = "connected".to_string();
-        (Self::question(Self::new(name, vec![&key])), key)
+        let request = Self::new(name, vec![&key]).question();
+        (request, key)
     }
 
     fn artist(name: String) -> (Self, String) {
         let key = "artist".to_string();
-        (Self::question(Self::new(name, vec![&key])), key)
+        let request = Self::new(name, vec![&key]).question();
+        (request, key)
     }
 
     fn current_title(name: String) -> (Self, String) {
         let key = "current_title".to_string();
-        (Self::question(Self::new(name, vec![&key])), key)
+        let request = Self::new(name, vec![&key]).question();
+        (request, key)
     }
 
     fn mode(name: String) -> (Self, String) {
         let key = "mode".to_string();
-        (Self::question(Self::new(name, vec![&key])), key)
+        let request = Self::new(name, vec![&key]).question();
+        (request, key)
+    }
+
+    fn playlist(name: String, key: String) -> (Self, String) {
+        let request = Self::new(name, vec!["playlist", &key]).question();
+        (request, key)
     }
 
     fn shuffle(name: String) -> (Self, String) {
-        let key = "shuffle";
-        (
-            Self::question(Self::new(name, vec!["playlist", key])),
-            key.to_string(),
-        )
+        Self::playlist(name, "shuffle".to_string())
+    }
+
+    fn index(name: String) -> (Self, String) {
+        Self::playlist(name, "index".to_string())
     }
 }
 
@@ -165,6 +182,14 @@ fn as_bool(response: &LmsResponse, key: &String) -> Result<bool> {
             .map(|i| i != 0)
             .ok_or_else(|| anyhow!("{} is not an i64", n)),
         _ => bail!("Wrong top level type for bool: {:?}", response),
+    }
+}
+
+fn as_u16(response: &LmsResponse, key: &String) -> Result<u16> {
+    let res_value = result_key(response, key)?;
+    match res_value {
+        serde_json::Value::String(n) => n.parse::<u16>().map_err(|e| anyhow!(e)),
+        _ => bail!("Wrong top level type for u16: {:?}", response),
     }
 }
 

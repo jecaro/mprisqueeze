@@ -25,6 +25,7 @@ pub async fn connect(hostname: String, port: u16, player_name: String) -> Result
         .serve_at("/org/mpris/MediaPlayer2", player)?
         .build()
         .await?;
+
     Ok(connection)
 }
 
@@ -75,12 +76,12 @@ struct MprisPlayer {
 
 #[dbus_interface(name = "org.mpris.MediaPlayer2.Player")]
 impl MprisPlayer {
-    async fn next(&self) { }
-    async fn previous(&self) { }
-    async fn pause(&self) { }
-    async fn play_pause(&self) { }
-    async fn stop(&self) { }
-    async fn play(&self) { }
+    async fn next(&self) {}
+    async fn previous(&self) {}
+    async fn pause(&self) {}
+    async fn play_pause(&self) {}
+    async fn stop(&self) {}
+    async fn play(&self) {}
     async fn seek(&self, _offset: i64) {}
     async fn set_position(&self, _track_id: String, _position: i64) {}
     async fn open_uri(&self, _uri: String) {}
@@ -129,8 +130,17 @@ impl MprisPlayer {
             .get_artist(self.player_name.clone())
             .await
             .unwrap_or("".to_string());
+        let index = self
+            .client
+            .get_index(self.player_name.clone())
+            .await
+            .unwrap_or(0);
         let mut hm = HashMap::new();
-        let op = ObjectPath::try_from("/").unwrap();
+        let op = ObjectPath::try_from(format!(
+            "/org/mpris/MediaPlayer2/{0}/track/{index}",
+            self.player_name
+        ))
+        .unwrap();
         hm.insert("mpris:trackid".to_string(), op.into());
         hm.insert("xesam:title".to_string(), current_title.into());
         hm.insert("xesam:artist".to_string(), artist.into());
