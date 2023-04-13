@@ -79,7 +79,12 @@ impl MprisPlayer {
     async fn next(&self) {}
     async fn previous(&self) {}
     async fn pause(&self) {}
-    async fn play_pause(&self) {}
+    async fn play_pause(&self) {
+        self.client
+            .play_pause(self.player_name.clone())
+            .await
+            .unwrap();
+    }
     async fn stop(&self) {}
     async fn play(&self) {}
     async fn seek(&self, _offset: i64) {}
@@ -92,7 +97,7 @@ impl MprisPlayer {
             .client
             .get_mode(self.player_name.clone())
             .await
-            .unwrap_or(Mode::Pause);
+            .unwrap();
         match mode {
             Mode::Play => "Playing",
             Mode::Pause => "Paused",
@@ -114,7 +119,7 @@ impl MprisPlayer {
             .client
             .get_shuffle(self.player_name.clone())
             .await
-            .unwrap_or(Shuffle::Off);
+            .unwrap();
 
         shuffle == Shuffle::Songs
     }
@@ -124,17 +129,17 @@ impl MprisPlayer {
             .client
             .get_current_title(self.player_name.clone())
             .await
-            .unwrap_or("".to_string());
+            .unwrap();
         let artist = self
             .client
             .get_artist(self.player_name.clone())
             .await
-            .unwrap_or("".to_string());
+            .unwrap();
         let index = self
             .client
             .get_index(self.player_name.clone())
             .await
-            .unwrap_or(0);
+            .unwrap();
         let mut hm = HashMap::new();
         let op = ObjectPath::try_from(format!(
             "/org/mpris/MediaPlayer2/{0}/track/{index}",

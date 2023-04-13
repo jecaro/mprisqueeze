@@ -98,6 +98,17 @@ impl LmsClient {
         let lms_response = response.json().await?;
         as_string(&lms_response, &key).map(|s| s.to_string())
     }
+
+    pub async fn play_pause(&self, name: String) -> Result<()> {
+        let request = LmsRequest::play_pause(name);
+        let response = self.post(&request).await?;
+
+        response
+            .json::<LmsResponse>()
+            .await
+            .map(|_| ())
+            .map_err(|e| e.into())
+    }
 }
 
 #[derive(Serialize, Debug)]
@@ -171,6 +182,10 @@ impl LmsRequest {
 
     fn index(name: String) -> (Self, String) {
         Self::playlist(name, "index".to_string())
+    }
+
+    fn play_pause(name: String) -> Self {
+        Self::new(name, vec!["pause"])
     }
 }
 
