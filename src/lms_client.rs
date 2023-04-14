@@ -99,15 +99,25 @@ impl LmsClient {
         as_string(&lms_response, &key).map(|s| s.to_string())
     }
 
-    pub async fn play_pause(&self, name: String) -> Result<()> {
-        let request = LmsRequest::play_pause(name);
+    async fn post_no_result(&self, request: &LmsRequest) -> Result<()> {
         let response = self.post(&request).await?;
-
         response
             .json::<LmsResponse>()
             .await
             .map(|_| ())
             .map_err(|e| e.into())
+    }
+
+    pub async fn play_pause(&self, name: String) -> Result<()> {
+        self.post_no_result(&LmsRequest::play_pause(name)).await
+    }
+
+    pub async fn previous(&self, name: String) -> Result<()> {
+        self.post_no_result(&LmsRequest::previous(name)).await
+    }
+
+    pub async fn next(&self, name: String) -> Result<()> {
+        self.post_no_result(&LmsRequest::next(name)).await
     }
 }
 
@@ -128,64 +138,71 @@ struct LmsResponse {
 }
 
 impl LmsRequest {
-    fn new(name: String, params: Vec<&str>) -> Self {
-        let params = params.into_iter().map(|s| s.to_string()).collect();
+    fn new(name: String) -> Self {
         Self {
             method: "slim.request".to_string(),
-            params: (name, params),
+            params: (name, vec![]),
         }
     }
 
-    fn version() -> (Self, String) {
-        let key = "version".to_string();
-        let request = Self::new("".to_string(), vec![&key]).question();
-        (request, key)
-    }
-
-    fn question(mut self) -> Self {
-        self.params.1.push(String::from("?"));
+    fn add_param(mut self, param: String) -> Self {
+        self.params.1.push(param);
         self
     }
 
+    fn version() -> (Self, String) {
+        Self::new("".to_string()).question("version".to_string())
+    }
+
+    fn question(self, key: String) -> (Self, String) {
+        (
+            self.add_param(key.clone()).add_param("?".to_string()),
+            key.to_string(),
+        )
+    }
+
     fn connected(name: String) -> (Self, String) {
-        let key = "connected".to_string();
-        let request = Self::new(name, vec![&key]).question();
-        (request, key)
+        Self::new(name).question("connected".to_string())
     }
 
     fn artist(name: String) -> (Self, String) {
-        let key = "artist".to_string();
-        let request = Self::new(name, vec![&key]).question();
-        (request, key)
+        Self::new(name).question("artist".to_string())
     }
 
     fn current_title(name: String) -> (Self, String) {
-        let key = "current_title".to_string();
-        let request = Self::new(name, vec![&key]).question();
-        (request, key)
+        Self::new(name).question("current_title".to_string())
     }
 
     fn mode(name: String) -> (Self, String) {
-        let key = "mode".to_string();
-        let request = Self::new(name, vec![&key]).question();
-        (request, key)
+        Self::new(name).question("mode".to_string())
     }
 
-    fn playlist(name: String, key: String) -> (Self, String) {
-        let request = Self::new(name, vec!["playlist", &key]).question();
-        (request, key)
+    fn playlist(name: String) -> Self {
+        Self::new(name).add_param("playlist".to_string())
     }
 
     fn shuffle(name: String) -> (Self, String) {
-        Self::playlist(name, "shuffle".to_string())
+        Self::playlist(name).question("shuffle".to_string())
     }
 
     fn index(name: String) -> (Self, String) {
-        Self::playlist(name, "index".to_string())
+        Self::playlist(name).question("index".to_string())
     }
 
     fn play_pause(name: String) -> Self {
-        Self::new(name, vec!["pause"])
+        Self::new(name).add_param("pause".to_string())
+    }
+
+    fn previous(name: String) -> Self {
+        Self::playlist(name)
+            .add_param("index".to_string())
+            .add_param("-1".to_string())
+    }
+
+    fn next(name: String) -> Self {
+        Self::playlist(name)
+            .add_param("index".to_string())
+            .add_param("+1".to_string())
     }
 }
 

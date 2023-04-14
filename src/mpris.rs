@@ -76,8 +76,15 @@ struct MprisPlayer {
 
 #[dbus_interface(name = "org.mpris.MediaPlayer2.Player")]
 impl MprisPlayer {
-    async fn next(&self) {}
-    async fn previous(&self) {}
+    async fn next(&self) {
+        self.client.next(self.player_name.clone()).await.unwrap();
+    }
+    async fn previous(&self) {
+        self.client
+            .previous(self.player_name.clone())
+            .await
+            .unwrap();
+    }
     async fn pause(&self) {}
     async fn play_pause(&self) {
         self.client
