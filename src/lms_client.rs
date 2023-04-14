@@ -108,6 +108,18 @@ impl LmsClient {
             .map_err(|e| e.into())
     }
 
+    pub async fn play(&self, name: String) -> Result<()> {
+        self.post_no_result(&LmsRequest::play(name)).await
+    }
+
+    pub async fn stop(&self, name: String) -> Result<()> {
+        self.post_no_result(&LmsRequest::stop(name)).await
+    }
+
+    pub async fn pause(&self, name: String) -> Result<()> {
+        self.post_no_result(&LmsRequest::pause(name)).await
+    }
+
     pub async fn play_pause(&self, name: String) -> Result<()> {
         self.post_no_result(&LmsRequest::play_pause(name)).await
     }
@@ -187,6 +199,20 @@ impl LmsRequest {
 
     fn index(name: String) -> (Self, String) {
         Self::playlist(name).question("index".to_string())
+    }
+
+    fn play(name: String) -> Self {
+        Self::new(name).add_param("play".to_string())
+    }
+
+    fn stop(name: String) -> Self {
+        Self::new(name).add_param("stop".to_string())
+    }
+
+    fn pause(name: String) -> Self {
+        Self::new(name)
+            .add_param("pause".to_string())
+            .add_param("1".to_string())
     }
 
     fn play_pause(name: String) -> Self {

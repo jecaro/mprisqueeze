@@ -85,15 +85,21 @@ impl MprisPlayer {
             .await
             .unwrap();
     }
-    async fn pause(&self) {}
+    async fn pause(&self) {
+        self.client.pause(self.player_name.clone()).await.unwrap();
+    }
     async fn play_pause(&self) {
         self.client
             .play_pause(self.player_name.clone())
             .await
             .unwrap();
     }
-    async fn stop(&self) {}
-    async fn play(&self) {}
+    async fn stop(&self) {
+        self.client.stop(self.player_name.clone()).await.unwrap();
+    }
+    async fn play(&self) {
+        self.client.play(self.player_name.clone()).await.unwrap();
+    }
     async fn seek(&self, _offset: i64) {}
     async fn set_position(&self, _track_id: String, _position: i64) {}
     async fn open_uri(&self, _uri: String) {}
