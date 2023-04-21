@@ -46,7 +46,7 @@ impl LmsClient {
         let (request, key) = LmsRequest::version();
         let response = self.post(&request).await?;
         let lms_response = response.json().await?;
-        as_string(&lms_response, &key)
+        as_string(lms_response, &key)
     }
 
     #[allow(dead_code)]
@@ -54,14 +54,14 @@ impl LmsClient {
         let (request, key) = LmsRequest::connected(name);
         let response = self.post(&request).await?;
         let lms_response = response.json().await?;
-        as_bool(&lms_response, &key)
+        as_bool(lms_response, &key)
     }
 
     pub async fn get_players(&self) -> Result<Vec<Player>> {
         let (request, key) = LmsRequest::players();
         let response = self.post(&request).await?;
         let lms_response = response.json().await?;
-        let value = result_key(&lms_response, &key)?.clone();
+        let value = result_key(lms_response, &key)?.clone();
         serde_json::from_value(value.to_owned()).map_err(|e| e.into())
     }
 
@@ -69,21 +69,21 @@ impl LmsClient {
         let (request, key) = LmsRequest::index(name);
         let response = self.post(&request).await?;
         let lms_response = response.json().await?;
-        as_u16(&lms_response, &key)
+        as_u16(lms_response, &key)
     }
 
     pub async fn get_shuffle(&self, name: String) -> Result<Shuffle> {
         let (request, key) = LmsRequest::shuffle(name);
         let response = self.post(&request).await?;
         let lms_response = response.json().await?;
-        as_shuffle(&lms_response, &key)
+        as_shuffle(lms_response, &key)
     }
 
     pub async fn get_mode(&self, name: String) -> Result<Mode> {
         let (request, key) = LmsRequest::mode(name);
         let response = self.post(&request).await?;
         let lms_response = response.json().await?;
-        as_mode(&lms_response, &key)
+        as_mode(lms_response, &key)
     }
 
     pub async fn get_artist(&self, name: String) -> Result<String> {
@@ -92,7 +92,7 @@ impl LmsClient {
         let lms_response = response.json().await?;
         // When listening a remote stream, the artist is not available. The key with the result is not
         // even in the json.
-        as_string(&lms_response, &key)
+        as_string(lms_response, &key)
             .map(|s| s.to_string())
             .or_else(|e| match e.downcast_ref::<ResultError>() {
                 Some(ResultError::NoKey { .. }) => Ok("".to_string()),
@@ -104,7 +104,7 @@ impl LmsClient {
         let (request, key) = LmsRequest::current_title(name);
         let response = self.post(&request).await?;
         let lms_response = response.json().await?;
-        as_string(&lms_response, &key).map(|s| s.to_string())
+        as_string(lms_response, &key).map(|s| s.to_string())
     }
 
     async fn post_no_result(&self, request: &LmsRequest) -> Result<()> {
@@ -254,56 +254,56 @@ impl LmsRequest {
     }
 }
 
-fn as_bool(response: &LmsResponse, key: &String) -> Result<bool> {
-    let res_value = result_key(response, key)?;
-    match res_value {
+fn as_bool(response: LmsResponse, key: &String) -> Result<bool> {
+    let value = result_key(response, key)?;
+    match value {
         serde_json::Value::Number(n) => n
             .as_i64()
             .map(|i| i != 0)
             .ok_or_else(|| anyhow!("{} is not an i64", n)),
-        _ => bail!("Wrong top level type for bool: {:?}", response),
+        _ => bail!("Wrong top level type for bool: {:?}", value),
     }
 }
 
-fn as_u16(response: &LmsResponse, key: &String) -> Result<u16> {
-    let res_value = result_key(response, key)?;
-    match res_value {
+fn as_u16(response: LmsResponse, key: &String) -> Result<u16> {
+    let value = result_key(response, key)?;
+    match value {
         serde_json::Value::String(n) => n.parse::<u16>().map_err(|e| anyhow!(e)),
-        _ => bail!("Wrong top level type for u16: {:?}", response),
+        _ => bail!("Wrong top level type for u16: {:?}", value),
     }
 }
 
-fn as_string(response: &LmsResponse, key: &String) -> Result<String> {
-    let res_value = result_key(response, key)?;
-    match res_value {
+fn as_string(response: LmsResponse, key: &String) -> Result<String> {
+    let value = result_key(response, key)?;
+    match value {
         serde_json::Value::String(s) => Ok(s.clone()),
-        _ => bail!("Wrong top level type for string: {:?}", res_value),
+        _ => bail!("Wrong top level type for string: {:?}", value),
     }
 }
 
-fn as_mode(response: &LmsResponse, key: &String) -> Result<Mode> {
-    let res_value = result_key(response, &key)?;
-    match res_value {
+fn as_mode(response: LmsResponse, key: &String) -> Result<Mode> {
+    let value = result_key(response, &key)?;
+    match value {
         serde_json::Value::String(s) => match s.as_str() {
             "stop" => Ok(Mode::Stop),
             "play" => Ok(Mode::Play),
             "pause" => Ok(Mode::Pause),
             other => bail!("Expected stop, play or pause, got {}", other),
         },
-        _ => bail!("Wrong top level type for mode: {:?}", response),
+        _ => bail!("Wrong top level type for mode: {:?}", value),
     }
 }
 
-fn as_shuffle(response: &LmsResponse, key: &String) -> Result<Shuffle> {
-    let res_value = result_key(response, &key)?;
-    match res_value {
+fn as_shuffle(response: LmsResponse, key: &String) -> Result<Shuffle> {
+    let value = result_key(response, &key)?;
+    match value {
         serde_json::Value::String(s) => match s.as_str() {
             "0" => Ok(Shuffle::Off),
             "1" => Ok(Shuffle::Songs),
             "2" => Ok(Shuffle::Albums),
             _ => bail!("Expected 0, 1 or 2, got {}", s),
         },
-        _ => bail!("Wrong top level type for shuffle: {:?}", response),
+        _ => bail!("Wrong top level type for shuffle: {:?}", value),
     }
 }
 
@@ -315,16 +315,16 @@ enum ResultError {
     NoKey { response: LmsResponse, key: String },
 }
 
-fn result_key<'a>(response: &'a LmsResponse, key: &String) -> Result<&'a serde_json::Value> {
-    let result = match &response.result {
-        serde_json::Value::Object(map) => Ok(map),
+fn result_key(response: LmsResponse, key: &String) -> Result<serde_json::Value> {
+    let mut result = match response.result {
+        serde_json::Value::Object(ref map) => Ok(map.clone()),
         _ => Err(anyhow!(ResultError::ResultHasWrongType {
             response: response.clone()
         })),
     }?;
-    result.get(key).ok_or_else(|| {
+    result.remove(key).ok_or_else(|| {
         anyhow!(ResultError::NoKey {
-            response: response.clone(),
+            response: response,
             key: key.clone()
         })
     })
