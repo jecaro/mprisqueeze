@@ -3,6 +3,7 @@ use reqwest::Client;
 use reqwest::Response;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 use thiserror::Error;
 
 #[derive(Debug)]
@@ -257,7 +258,7 @@ impl LmsRequest {
 fn as_bool(response: LmsResponse, key: &String) -> Result<bool> {
     let value = result_key(response, key)?;
     match value {
-        serde_json::Value::Number(n) => n
+        Value::Number(n) => n
             .as_i64()
             .map(|i| i != 0)
             .ok_or_else(|| anyhow!("{} is not an i64", n)),
@@ -268,7 +269,7 @@ fn as_bool(response: LmsResponse, key: &String) -> Result<bool> {
 fn as_u16(response: LmsResponse, key: &String) -> Result<u16> {
     let value = result_key(response, key)?;
     match value {
-        serde_json::Value::String(n) => n.parse::<u16>().map_err(|e| anyhow!(e)),
+        Value::String(n) => n.parse::<u16>().map_err(|e| anyhow!(e)),
         _ => bail!("Wrong top level type for u16: {:?}", value),
     }
 }
@@ -276,7 +277,7 @@ fn as_u16(response: LmsResponse, key: &String) -> Result<u16> {
 fn as_string(response: LmsResponse, key: &String) -> Result<String> {
     let value = result_key(response, key)?;
     match value {
-        serde_json::Value::String(s) => Ok(s.clone()),
+        Value::String(s) => Ok(s.clone()),
         _ => bail!("Wrong top level type for string: {:?}", value),
     }
 }
@@ -284,7 +285,7 @@ fn as_string(response: LmsResponse, key: &String) -> Result<String> {
 fn as_mode(response: LmsResponse, key: &String) -> Result<Mode> {
     let value = result_key(response, &key)?;
     match value {
-        serde_json::Value::String(s) => match s.as_str() {
+        Value::String(s) => match s.as_str() {
             "stop" => Ok(Mode::Stop),
             "play" => Ok(Mode::Play),
             "pause" => Ok(Mode::Pause),
@@ -297,7 +298,7 @@ fn as_mode(response: LmsResponse, key: &String) -> Result<Mode> {
 fn as_shuffle(response: LmsResponse, key: &String) -> Result<Shuffle> {
     let value = result_key(response, &key)?;
     match value {
-        serde_json::Value::String(s) => match s.as_str() {
+        Value::String(s) => match s.as_str() {
             "0" => Ok(Shuffle::Off),
             "1" => Ok(Shuffle::Songs),
             "2" => Ok(Shuffle::Albums),
@@ -315,9 +316,9 @@ enum ResultError {
     NoKey { response: LmsResponse, key: String },
 }
 
-fn result_key(response: LmsResponse, key: &String) -> Result<serde_json::Value> {
+fn result_key(response: LmsResponse, key: &String) -> Result<Value> {
     let mut result = match response.result {
-        serde_json::Value::Object(ref map) => Ok(map.clone()),
+        Value::Object(ref map) => Ok(map.clone()),
         _ => Err(anyhow!(ResultError::ResultHasWrongType {
             response: response.clone()
         })),

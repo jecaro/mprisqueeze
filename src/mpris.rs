@@ -1,5 +1,4 @@
 use crate::lms_client::{LmsClient, Mode, Shuffle};
-use anyhow::Result;
 use std::{collections::HashMap, convert::TryFrom, result};
 use zbus::{
     dbus_interface, fdo,
@@ -7,7 +6,10 @@ use zbus::{
 };
 use zbus::{Connection, ConnectionBuilder};
 
-pub async fn connect(client: LmsClient, player_name: String) -> Result<Connection> {
+pub async fn start_dbus_server(
+    client: LmsClient,
+    player_name: String,
+) -> anyhow::Result<Connection> {
     let root = MprisRoot {
         name: player_name.clone(),
     };

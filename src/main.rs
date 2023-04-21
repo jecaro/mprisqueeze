@@ -1,10 +1,16 @@
-use anyhow::{bail, Ok, Result};
+use anyhow::{anyhow, bail, Ok, Result};
 use clap::{command, Parser};
 use lms_client::LmsClient;
-use mpris::connect;
+use mpris::start_dbus_server;
+use std::time::Duration;
+use tokio::{
+    pin,
+    process::{Child, Command},
+    select,
+    time::sleep,
+};
 mod lms_client;
 mod mpris;
-use tokio::process::Command;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -23,10 +29,10 @@ struct Options {
 }
 
 async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) -> Result<()> {
-    let sleep = tokio::time::sleep(std::time::Duration::from_secs(timeout));
-    tokio::pin!(sleep);
+    let sleep = sleep(Duration::from_secs(timeout));
+    pin!(sleep);
     loop {
-        tokio::select! {
+        select! {
             _ = &mut sleep => bail!("Player not available after {} seconds", timeout),
             players = client.get_players() =>
             {
@@ -41,7 +47,7 @@ async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) ->
     }
 }
 
-fn start_squeezelite(options: &Options) -> Result<tokio::process::Child> {
+fn start_squeezelite(options: &Options) -> Result<Child> {
     let (player_command, player_args) = match options.player_command[..] {
         [] => bail!("No player command given"),
         [ref player_command, ref player_args @ ..] => Ok((player_command, player_args)),
@@ -59,7 +65,7 @@ fn start_squeezelite(options: &Options) -> Result<tokio::process::Child> {
     Command::new(player_command)
         .args(player_args_with_name)
         .spawn()
-        .map_err(|e| anyhow::anyhow!("Failed to start player command {}: {}", player_command, e))
+        .map_err(|e| anyhow!("Failed to start player command {}: {}", player_command, e))
 }
 
 #[tokio::main]
@@ -75,7 +81,7 @@ async fn main() -> Result<()> {
     wait_for_player(&client, &options.player_name, options.timeout).await?;
 
     // start the MPRIS server
-    let _connection = connect(client, options.player_name.clone()).await?;
+    let _connection = start_dbus_server(client, options.player_name).await?;
 
     // wait for squeezelite to exit
     let exit_status = player_process.wait().await?;
