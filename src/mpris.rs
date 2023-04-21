@@ -1,8 +1,8 @@
 use crate::lms_client::{LmsClient, Mode, Shuffle};
 use anyhow::Result;
-use std::{collections::HashMap, convert::TryFrom};
+use std::{collections::HashMap, convert::TryFrom, result};
 use zbus::{
-    dbus_interface,
+    dbus_interface, fdo,
     zvariant::{ObjectPath, Value},
 };
 use zbus::{Connection, ConnectionBuilder};
@@ -74,49 +74,67 @@ struct MprisPlayer {
     player_name: String,
 }
 
+fn to_fdo_error(err: anyhow::Error) -> fdo::Error {
+    fdo::Error::Failed(err.to_string())
+}
+
 #[dbus_interface(name = "org.mpris.MediaPlayer2.Player")]
 impl MprisPlayer {
-    async fn next(&self) {
-        self.client.next(self.player_name.clone()).await.unwrap();
+    async fn next(&self) -> Result<(), fdo::Error> {
+        self.client
+            .next(self.player_name.clone())
+            .await
+            .map_err(to_fdo_error)
     }
-    async fn previous(&self) {
+    async fn previous(&self) -> Result<(), fdo::Error> {
         self.client
             .previous(self.player_name.clone())
             .await
-            .unwrap();
+            .map_err(to_fdo_error)
     }
-    async fn pause(&self) {
-        self.client.pause(self.player_name.clone()).await.unwrap();
+    async fn pause(&self) -> Result<(), fdo::Error> {
+        self.client
+            .pause(self.player_name.clone())
+            .await
+            .map_err(to_fdo_error)
     }
-    async fn play_pause(&self) {
+    async fn play_pause(&self) -> Result<(), fdo::Error> {
         self.client
             .play_pause(self.player_name.clone())
             .await
-            .unwrap();
+            .map_err(to_fdo_error)
     }
-    async fn stop(&self) {
-        self.client.stop(self.player_name.clone()).await.unwrap();
+    async fn stop(&self) -> Result<(), fdo::Error> {
+        self.client
+            .stop(self.player_name.clone())
+            .await
+            .map_err(to_fdo_error)
     }
-    async fn play(&self) {
-        self.client.play(self.player_name.clone()).await.unwrap();
+    async fn play(&self) -> Result<(), fdo::Error> {
+        let res = self
+            .client
+            .play(self.player_name.clone())
+            .await
+            .map_err(to_fdo_error);
+        res
     }
     async fn seek(&self, _offset: i64) {}
     async fn set_position(&self, _track_id: String, _position: i64) {}
     async fn open_uri(&self, _uri: String) {}
 
     #[dbus_interface(property)]
-    async fn playback_status(&self) -> String {
+    async fn playback_status(&self) -> result::Result<String, fdo::Error> {
         let mode = self
             .client
             .get_mode(self.player_name.clone())
             .await
-            .unwrap();
-        match mode {
+            .map_err(to_fdo_error)?;
+        Ok(match mode {
             Mode::Play => "Playing",
             Mode::Pause => "Paused",
             Mode::Stop => "Stopped",
         }
-        .to_string()
+        .to_string())
     }
     #[dbus_interface(property)]
     async fn loop_status(&self) -> String {
@@ -127,32 +145,32 @@ impl MprisPlayer {
         1.0
     }
     #[dbus_interface(property)]
-    async fn shuffle(&self) -> bool {
+    async fn shuffle(&self) -> result::Result<bool, fdo::Error> {
         let shuffle = self
             .client
             .get_shuffle(self.player_name.clone())
             .await
-            .unwrap();
+            .map_err(to_fdo_error)?;
 
-        shuffle == Shuffle::Songs
+        Ok(shuffle == Shuffle::Songs)
     }
     #[dbus_interface(property)]
-    async fn metadata(&self) -> HashMap<String, Value> {
+    async fn metadata(&self) -> result::Result<HashMap<String, Value>, fdo::Error> {
         let current_title = self
             .client
             .get_current_title(self.player_name.clone())
             .await
-            .unwrap();
+            .map_err(to_fdo_error)?;
         let artist = self
             .client
             .get_artist(self.player_name.clone())
             .await
-            .unwrap();
+            .map_err(to_fdo_error)?;
         let index = self
             .client
             .get_index(self.player_name.clone())
             .await
-            .unwrap();
+            .map_err(to_fdo_error)?;
         let mut hm = HashMap::new();
         let op = ObjectPath::try_from(format!(
             "/org/mpris/MediaPlayer2/{0}/track/{index}",
@@ -162,7 +180,7 @@ impl MprisPlayer {
         hm.insert("mpris:trackid".to_string(), op.into());
         hm.insert("xesam:title".to_string(), current_title.into());
         hm.insert("xesam:artist".to_string(), artist.into());
-        hm
+        Ok(hm)
     }
     #[dbus_interface(property)]
     async fn volume(&self) -> f64 {
