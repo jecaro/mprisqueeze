@@ -49,7 +49,6 @@ impl LmsClient {
         as_string(&lms_response, &key)
     }
 
-    #[allow(dead_code)]
     pub async fn get_connected(&self, name: String) -> Result<bool> {
         let (request, key) = LmsRequest::connected(name);
         let response = self.post(&request).await?;
