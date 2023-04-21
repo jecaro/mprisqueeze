@@ -35,6 +35,7 @@
               rust-analyzer
               rustc
               rustfmt
+              squeezelite-pulse
             ];
         };
       }
