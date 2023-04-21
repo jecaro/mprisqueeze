@@ -28,12 +28,13 @@ async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) ->
     loop {
         tokio::select! {
             _ = &mut sleep => bail!("Player not available after {} seconds", timeout),
-            connected = client.get_connected(player_name.to_string()) =>
+            players = client.get_players() =>
             {
-                match connected {
-                    Result::Ok(true) => break Ok(()),
-                    Result::Ok(false) => continue,
-                    Err(e) => bail!("Error while waiting for player: {}", e),
+                let found = players.map(|players| {
+                    players.iter().any(|player| player.name == player_name)
+                })?;
+                if found {
+                    break Ok(());
                 }
             }
         }

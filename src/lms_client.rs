@@ -49,11 +49,20 @@ impl LmsClient {
         as_string(&lms_response, &key)
     }
 
+    #[allow(dead_code)]
     pub async fn get_connected(&self, name: String) -> Result<bool> {
         let (request, key) = LmsRequest::connected(name);
         let response = self.post(&request).await?;
         let lms_response = response.json().await?;
         as_bool(&lms_response, &key)
+    }
+
+    pub async fn get_players(&self) -> Result<Vec<Player>> {
+        let (request, key) = LmsRequest::players();
+        let response = self.post(&request).await?;
+        let lms_response = response.json().await?;
+        let value = result_key(&lms_response, &key)?.clone();
+        serde_json::from_value(value.to_owned()).map_err(|e| e.into())
     }
 
     pub async fn get_index(&self, name: String) -> Result<u16> {
@@ -132,13 +141,13 @@ impl LmsClient {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug, Serialize)]
 struct LmsRequest {
     method: String,
     params: (String, Vec<String>),
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize)]
 struct LmsResponse {
     #[allow(dead_code)]
     method: String,
@@ -146,6 +155,11 @@ struct LmsResponse {
     params: (String, Vec<String>),
 
     result: serde_json::Value,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Player {
+    pub name: String,
 }
 
 impl LmsRequest {
@@ -168,12 +182,21 @@ impl LmsRequest {
     fn question(self, key: String) -> (Self, String) {
         (
             self.add_param(key.clone()).add_param("?".to_string()),
-            key.to_string(),
+            ("_".to_owned() + &key),
         )
     }
 
     fn connected(name: String) -> (Self, String) {
         Self::new(name).question("connected".to_string())
+    }
+
+    fn players() -> (Self, String) {
+        (
+            Self::new("".to_string())
+                .add_param("players".to_string())
+                .add_param("0".to_string()),
+            "players_loop".to_string(),
+        )
     }
 
     fn artist(name: String) -> (Self, String) {
@@ -299,7 +322,7 @@ fn result_key<'a>(response: &'a LmsResponse, key: &String) -> Result<&'a serde_j
             response: response.clone()
         })),
     }?;
-    result.get(&("_".to_string() + key)).ok_or_else(|| {
+    result.get(key).ok_or_else(|| {
         anyhow!(ResultError::NoKey {
             response: response.clone(),
             key: key.clone()
