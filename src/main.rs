@@ -76,25 +76,33 @@ async fn main() -> Result<()> {
     // start squeezelite
     let mut player_process = start_squeezelite(&options)?;
 
-    // wait for the player to be available
-    let client = LmsClient::new(options.hostname.clone(), options.port);
-    wait_for_player(&client, &options.player_name, options.timeout).await?;
+    let result: Result<()> = (|| async {
+        // wait for the player to be available
+        let client = LmsClient::new(options.hostname.clone(), options.port);
+        wait_for_player(&client, &options.player_name, options.timeout).await?;
 
-    // get a listener for errors before the client is moved into the MPRIS server
-    let error_listener = client.error.listen();
+        // get a listener for errors before the client is moved into the MPRIS server
+        let error_listener = client.error.listen();
 
-    // start the MPRIS server
-    let _connection = start_dbus_server(client, options.player_name).await?;
+        // start the MPRIS server
+        let _connection = start_dbus_server(client, options.player_name).await?;
 
-    select! {
-        _ = error_listener => bail!("Error from LMS"),
-        _ = player_process.wait() =>
-        {
-            let exit_status = player_process.wait().await?;
-            match exit_status.code() {
-                Some(code) => bail!("Player exited with code {}", code),
-                None => bail!("Player exited without code"),
+        select! {
+            _ = error_listener =>  bail!("Error from LMS") ,
+            _ = player_process.wait() =>
+            {
+                let exit_status = player_process.wait().await?;
+                match exit_status.code() {
+                    Some(code) => bail!("Player exited with code {}", code),
+                    None => bail!("Player exited without code"),
+                }
             }
         }
-    }
+    })()
+    .await;
+
+    // kill the player process no matter what
+    player_process.kill().await?;
+
+    result
 }
