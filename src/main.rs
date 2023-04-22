@@ -15,16 +15,24 @@ mod mpris;
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 struct Options {
-    #[arg(short = 'H', long)]
+    #[arg(short = 'H', long, help = "LMS hostname")]
     hostname: String,
-    #[arg(short = 'P', long, default_value_t = 9000)]
+    #[arg(short = 'P', long, default_value_t = 9000, help = "LMS port")]
     port: u16,
-    #[arg(short, long, default_value = "SqueezeLite")]
+    #[arg(short, long, default_value = "SqueezeLite", help = "Player name")]
     player_name: String,
-    #[arg(short, long, default_value_t = 3)]
+    #[arg(
+        short,
+        long,
+        default_value_t = 3,
+        help = "Timeout in seconds for squeezelite to be recognized by LMS"
+    )]
     timeout: u64,
-    #[arg(last = true, default_values_t = vec!["squeezelite".to_string(), "-n".to_string(),
-          "{}".to_string()])]
+    #[arg(
+        last = true,
+        default_values_t = vec!["squeezelite".to_string(), "-n".to_string(), "{}".to_string()],
+        help = "Player command and arguments. The string '{}' will be replaced with the player name."
+    )]
     player_command: Vec<String>,
 }
 
