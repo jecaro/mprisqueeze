@@ -1,4 +1,4 @@
-use crate::lms_client::{LmsClient, Mode, Shuffle};
+use crate::lms::{LmsClient, Mode, Shuffle};
 use std::{collections::HashMap, convert::TryFrom, result};
 use zbus::{
     dbus_interface, fdo,

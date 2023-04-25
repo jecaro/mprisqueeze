@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Ok, Result};
 use clap::{command, Parser};
-use lms_client::LmsClient;
+use lms::LmsClient;
 use mpris::start_dbus_server;
 use std::time::Duration;
 use tokio::{
@@ -9,7 +9,7 @@ use tokio::{
     select,
     time::sleep,
 };
-mod lms_client;
+mod lms;
 mod mpris;
 
 #[derive(Debug, Parser)]
