@@ -42,14 +42,15 @@ async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) ->
     loop {
         select! {
             _ = &mut sleep => bail!("Player not available after {} seconds", timeout),
-            players = client.get_players() =>
+            count = client.get_player_count() =>
             {
-                let found = players.map(|players| {
-                    players.iter().any(|player| player.name == player_name)
-                })?;
-                if found {
-                    break Ok(());
+                if let Result::Ok(true) = count.as_ref().map(|count| *count != 0) {
+                    let players = client.get_players().await?;
+                    if players.iter().any(|player| player.name == player_name) {
+                        break Ok(());
+                    }
                 }
+                count.map(|_| ())?
             }
         }
     }

@@ -43,6 +43,12 @@ impl LmsRequest {
         )
     }
 
+    pub fn player_count() -> (Self, String) {
+        Self::new("".to_string())
+            .add_param("player".to_string())
+            .question("count".to_string())
+    }
+
     pub fn artist(name: String) -> (Self, String) {
         Self::new(name).question("artist".to_string())
     }

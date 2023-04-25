@@ -82,6 +82,20 @@ impl LmsClient {
         .await
     }
 
+    pub async fn get_player_count(&self) -> Result<u64> {
+        self.handle_error(
+            (|| async {
+                let (request, key) = LmsRequest::player_count();
+                let response = self.post(&request).await?;
+                let lms_response = response.json().await?;
+                as_u64(lms_response, &key)
+            })()
+            .await,
+            anyhow!("Error player_count"),
+        )
+        .await
+    }
+
     pub async fn get_players(&self) -> Result<Vec<Player>> {
         self.handle_error(
             (|| async {
@@ -97,13 +111,13 @@ impl LmsClient {
         .await
     }
 
-    pub async fn get_index(&self, name: String) -> Result<u16> {
+    pub async fn get_index(&self, name: String) -> Result<u64> {
         self.handle_error(
             (|| async {
                 let (request, key) = LmsRequest::index(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_u16(lms_response, &key)
+                as_u64(lms_response, &key)
             })()
             .await,
             anyhow!("Error get_index"),
@@ -145,8 +159,8 @@ impl LmsClient {
                 let (request, key) = LmsRequest::artist(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                // When listening a remote stream, the artist is not available. The key with the result is not
-                // even in the json.
+                // When listening to a remote stream, the artist is not available. The key with the
+                // result is not even in the json.
                 as_string(lms_response, &key)
                     .map(|s| s.to_string())
                     .or_else(|e| match e.downcast_ref::<ResultError>() {
@@ -273,11 +287,12 @@ fn as_bool(response: LmsResponse, key: &String) -> Result<bool> {
     }
 }
 
-fn as_u16(response: LmsResponse, key: &String) -> Result<u16> {
+fn as_u64(response: LmsResponse, key: &String) -> Result<u64> {
     let value = result_key(response, key)?;
     match value {
-        Value::String(n) => n.parse::<u16>().map_err(|e| anyhow!(e)),
-        _ => bail!("Wrong top level type for u16: {:?}", value),
+        Value::String(n) => n.parse::<u64>().map_err(|e| e.into()),
+        Value::Number(n) => n.as_u64().ok_or_else(|| anyhow!("{} is not an u64", n)),
+        _ => bail!("Wrong top level type for u64: {:?}", value),
     }
 }
 
