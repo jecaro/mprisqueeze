@@ -73,6 +73,10 @@ impl LmsRequest {
         Self::playlist(name).question("index".to_string())
     }
 
+    pub fn track_count(name: String) -> (Self, String) {
+        Self::playlist(name).question("tracks".to_string())
+    }
+
     pub fn play(name: String) -> Self {
         Self::new(name).add_param("play".to_string())
     }

@@ -156,6 +156,14 @@ impl MprisPlayer {
     }
     #[dbus_interface(property)]
     async fn metadata(&self) -> result::Result<HashMap<String, Value>, fdo::Error> {
+        let track_count = self
+            .client
+            .get_track_count(self.player_name.clone())
+            .await
+            .map_err(to_fdo_error)?;
+        if track_count == 0 {
+            return Ok(HashMap::new());
+        }
         let current_title = self
             .client
             .get_current_title(self.player_name.clone())
@@ -178,8 +186,12 @@ impl MprisPlayer {
         ))
         .unwrap();
         hm.insert("mpris:trackid".to_string(), op.into());
-        hm.insert("xesam:title".to_string(), current_title.into());
-        hm.insert("xesam:artist".to_string(), artist.into());
+        artist.map(|artist| {
+            hm.insert("xesam:artist".to_string(), vec![artist].into());
+        });
+        current_title.map(|title| {
+            hm.insert("xesam:title".to_string(), title.into());
+        });
         Ok(hm)
     }
     #[dbus_interface(property)]

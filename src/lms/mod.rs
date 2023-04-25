@@ -125,6 +125,20 @@ impl LmsClient {
         .await
     }
 
+    pub async fn get_track_count(&self, name: String) -> Result<u64> {
+        self.handle_error(
+            (|| async {
+                let (request, key) = LmsRequest::track_count(name);
+                let response = self.post(&request).await?;
+                let lms_response = response.json().await?;
+                as_u64(lms_response, &key)
+            })()
+            .await,
+            anyhow!("Error get_track_count"),
+        )
+        .await
+    }
+
     pub async fn get_shuffle(&self, name: String) -> Result<Shuffle> {
         self.handle_error(
             (|| async {
@@ -153,20 +167,20 @@ impl LmsClient {
         .await
     }
 
-    pub async fn get_artist(&self, name: String) -> Result<String> {
+    // When the playlist is empty, the key is not here. The "result" field contains an empty
+    // object.
+    pub async fn get_artist(&self, name: String) -> Result<Option<String>> {
         self.handle_error(
             (|| async {
                 let (request, key) = LmsRequest::artist(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                // When listening to a remote stream, the artist is not available. The key with the
-                // result is not even in the json.
-                as_string(lms_response, &key)
-                    .map(|s| s.to_string())
-                    .or_else(|e| match e.downcast_ref::<ResultError>() {
-                        Some(ResultError::NoKey { .. }) => Ok("".to_string()),
+                as_string(lms_response, &key).map(Some).or_else(|e| {
+                    match e.downcast_ref::<ResultError>() {
+                        Some(ResultError::NoKey { .. }) => Ok(None),
                         _ => Err(e),
-                    })
+                    }
+                })
             })()
             .await,
             anyhow!("Error get_artist"),
@@ -174,13 +188,19 @@ impl LmsClient {
         .await
     }
 
-    pub async fn get_current_title(&self, name: String) -> Result<String> {
+    // Same remark as get_artist
+    pub async fn get_current_title(&self, name: String) -> Result<Option<String>> {
         self.handle_error(
             (|| async {
                 let (request, key) = LmsRequest::current_title(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_string(lms_response, &key).map(|s| s.to_string())
+                as_string(lms_response, &key).map(Some).or_else(|e| {
+                    match e.downcast_ref::<ResultError>() {
+                        Some(ResultError::NoKey { .. }) => Ok(None),
+                        _ => Err(e),
+                    }
+                })
             })()
             .await,
             anyhow!("Error get_current_title"),
