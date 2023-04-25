@@ -1,11 +1,11 @@
 use anyhow::{anyhow, bail, Ok, Result};
-use event_listener::Event;
 use reqwest::Client;
 use reqwest::Response;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
 use thiserror::Error;
+use tokio::sync::mpsc;
 
 #[derive(Debug)]
 pub enum Mode {
@@ -23,193 +23,206 @@ pub enum Shuffle {
 
 #[derive(Debug)]
 pub struct LmsClient {
-    pub client: Client,
-    pub url: String,
-    pub error: Event,
+    client: Client,
+    url: String,
+    sender: mpsc::Sender<anyhow::Error>,
 }
 
 impl LmsClient {
-    pub fn new(hostname: String, port: u16) -> Self {
+    pub fn new(hostname: String, port: u16) -> (Self, mpsc::Receiver<anyhow::Error>) {
         let client = Client::new();
         let url = format!("http://{}:{}/jsonrpc.js", hostname, port);
-        let error = Event::new();
-        Self { client, url, error }
+        let (sender, receiver) = mpsc::channel::<anyhow::Error>(1);
+
+        (
+            Self {
+                client,
+                url,
+                sender,
+            },
+            receiver,
+        )
     }
 
     #[allow(dead_code)]
     pub async fn get_version(&self) -> Result<String> {
-        (|| async {
-            let (request, key) = LmsRequest::version();
-            let response = self.post(&request).await?;
-            let lms_response = response.json().await?;
-            as_string(lms_response, &key)
-        })()
+        self.handle_error(
+            (|| async {
+                let (request, key) = LmsRequest::version();
+                let response = self.post(&request).await?;
+                let lms_response = response.json().await?;
+                as_string(lms_response, &key)
+            })()
+            .await,
+            anyhow!("Error get_version"),
+        )
         .await
-        .map_err(|e| {
-            self.error.notify(1);
-            e
-        })
     }
 
     #[allow(dead_code)]
     pub async fn get_connected(&self, name: String) -> Result<bool> {
-        (|| async {
-            let (request, key) = LmsRequest::connected(name);
-            let response = self.post(&request).await?;
-            let lms_response = response.json().await?;
-            as_bool(lms_response, &key)
-        })()
+        self.handle_error(
+            (|| async {
+                let (request, key) = LmsRequest::connected(name);
+                let response = self.post(&request).await?;
+                let lms_response = response.json().await?;
+                as_bool(lms_response, &key)
+            })()
+            .await,
+            anyhow!("Error get_connected"),
+        )
         .await
-        .map_err(|e| {
-            self.error.notify(1);
-            e
-        })
     }
 
     pub async fn get_players(&self) -> Result<Vec<Player>> {
-        (|| async {
-            let (request, key) = LmsRequest::players();
-            let response = self.post(&request).await?;
-            let lms_response = response.json().await?;
-            let value = result_key(lms_response, &key)?.clone();
-            serde_json::from_value(value.to_owned()).map_err(|e| e.into())
-        })()
+        self.handle_error(
+            (|| async {
+                let (request, key) = LmsRequest::players();
+                let response = self.post(&request).await?;
+                let lms_response = response.json().await?;
+                let value = result_key(lms_response, &key)?.clone();
+                serde_json::from_value(value.to_owned()).map_err(|e| e.into())
+            })()
+            .await,
+            anyhow!("Error get_players"),
+        )
         .await
-        .map_err(|e| {
-            self.error.notify(1);
-            e
-        })
     }
 
     pub async fn get_index(&self, name: String) -> Result<u16> {
-        (|| async {
-            let (request, key) = LmsRequest::index(name);
-            let response = self.post(&request).await?;
-            let lms_response = response.json().await?;
-            as_u16(lms_response, &key)
-        })()
+        self.handle_error(
+            (|| async {
+                let (request, key) = LmsRequest::index(name);
+                let response = self.post(&request).await?;
+                let lms_response = response.json().await?;
+                as_u16(lms_response, &key)
+            })()
+            .await,
+            anyhow!("Error get_index"),
+        )
         .await
-        .map_err(|e| {
-            self.error.notify(1);
-            e
-        })
     }
 
     pub async fn get_shuffle(&self, name: String) -> Result<Shuffle> {
-        (|| async {
-            let (request, key) = LmsRequest::shuffle(name);
-            let response = self.post(&request).await?;
-            let lms_response = response.json().await?;
-            as_shuffle(lms_response, &key)
-        })()
+        self.handle_error(
+            (|| async {
+                let (request, key) = LmsRequest::shuffle(name);
+                let response = self.post(&request).await?;
+                let lms_response = response.json().await?;
+                as_shuffle(lms_response, &key)
+            })()
+            .await,
+            anyhow!("Error get_shuffle"),
+        )
         .await
-        .map_err(|e| {
-            self.error.notify(1);
-            e
-        })
     }
 
     pub async fn get_mode(&self, name: String) -> Result<Mode> {
-        (|| async {
-            let (request, key) = LmsRequest::mode(name);
-            let response = self.post(&request).await?;
-            let lms_response = response.json().await?;
-            as_mode(lms_response, &key)
-        })()
+        self.handle_error(
+            (|| async {
+                let (request, key) = LmsRequest::mode(name);
+                let response = self.post(&request).await?;
+                let lms_response = response.json().await?;
+                as_mode(lms_response, &key)
+            })()
+            .await,
+            anyhow!("Error get_mode"),
+        )
         .await
-        .map_err(|e| {
-            self.error.notify(1);
-            e
-        })
     }
 
     pub async fn get_artist(&self, name: String) -> Result<String> {
-        (|| async {
-            let (request, key) = LmsRequest::artist(name);
-            let response = self.post(&request).await?;
-            let lms_response = response.json().await?;
-            // When listening a remote stream, the artist is not available. The key with the result is not
-            // even in the json.
-            as_string(lms_response, &key)
-                .map(|s| s.to_string())
-                .or_else(|e| match e.downcast_ref::<ResultError>() {
-                    Some(ResultError::NoKey { .. }) => Ok("".to_string()),
-                    _ => Err(e),
-                })
-        })()
+        self.handle_error(
+            (|| async {
+                let (request, key) = LmsRequest::artist(name);
+                let response = self.post(&request).await?;
+                let lms_response = response.json().await?;
+                // When listening a remote stream, the artist is not available. The key with the result is not
+                // even in the json.
+                as_string(lms_response, &key)
+                    .map(|s| s.to_string())
+                    .or_else(|e| match e.downcast_ref::<ResultError>() {
+                        Some(ResultError::NoKey { .. }) => Ok("".to_string()),
+                        _ => Err(e),
+                    })
+            })()
+            .await,
+            anyhow!("Error get_artist"),
+        )
         .await
-        .map_err(|e| {
-            self.error.notify(1);
-            e
-        })
     }
 
     pub async fn get_current_title(&self, name: String) -> Result<String> {
-        (|| async {
-            let (request, key) = LmsRequest::current_title(name);
-            let response = self.post(&request).await?;
-            let lms_response = response.json().await?;
-            as_string(lms_response, &key).map(|s| s.to_string())
-        })()
+        self.handle_error(
+            (|| async {
+                let (request, key) = LmsRequest::current_title(name);
+                let response = self.post(&request).await?;
+                let lms_response = response.json().await?;
+                as_string(lms_response, &key).map(|s| s.to_string())
+            })()
+            .await,
+            anyhow!("Error get_current_title"),
+        )
         .await
-        .map_err(|e| {
-            self.error.notify(1);
-            e
-        })
     }
 
     pub async fn play(&self, name: String) -> Result<()> {
-        self.post_no_result(&LmsRequest::play(name))
-            .await
-            .map_err(|e| {
-                self.error.notify(1);
-                e
-            })
+        self.handle_error(
+            self.post_no_result(&LmsRequest::play(name)).await,
+            anyhow!("Error play"),
+        )
+        .await
     }
 
     pub async fn stop(&self, name: String) -> Result<()> {
-        self.post_no_result(&LmsRequest::stop(name))
-            .await
-            .map_err(|e| {
-                self.error.notify(1);
-                e
-            })
+        self.handle_error(
+            self.post_no_result(&LmsRequest::stop(name)).await,
+            anyhow!("Error stop"),
+        )
+        .await
     }
 
     pub async fn pause(&self, name: String) -> Result<()> {
-        self.post_no_result(&LmsRequest::pause(name))
-            .await
-            .map_err(|e| {
-                self.error.notify(1);
-                e
-            })
+        self.handle_error(
+            self.post_no_result(&LmsRequest::pause(name)).await,
+            anyhow!("Error pause"),
+        )
+        .await
     }
 
     pub async fn play_pause(&self, name: String) -> Result<()> {
-        self.post_no_result(&LmsRequest::play_pause(name))
-            .await
-            .map_err(|e| {
-                self.error.notify(1);
-                e
-            })
+        self.handle_error(
+            self.post_no_result(&LmsRequest::play_pause(name)).await,
+            anyhow!("Error play_pause"),
+        )
+        .await
     }
 
     pub async fn previous(&self, name: String) -> Result<()> {
-        self.post_no_result(&LmsRequest::previous(name))
-            .await
-            .map_err(|e| {
-                self.error.notify(1);
-                e
-            })
+        self.handle_error(
+            self.post_no_result(&LmsRequest::previous(name)).await,
+            anyhow!("Error previous"),
+        )
+        .await
     }
 
     pub async fn next(&self, name: String) -> Result<()> {
-        self.post_no_result(&LmsRequest::next(name))
-            .await
-            .map_err(|e| {
-                self.error.notify(1);
-                e
-            })
+        self.handle_error(
+            self.post_no_result(&LmsRequest::next(name)).await,
+            anyhow!("Error next"),
+        )
+        .await
+    }
+
+    // The error is not passed to the client but send to the error channel.
+    async fn handle_error<T>(&self, result: Result<T>, error: anyhow::Error) -> Result<T> {
+        match result {
+            Result::Ok(s) => Ok(s),
+            Err(error_from_result) => {
+                self.sender.send(error_from_result).await?;
+                Err(error)
+            }
+        }
     }
 
     async fn post(&self, request: &LmsRequest) -> Result<Response> {

@@ -86,17 +86,14 @@ async fn main() -> Result<()> {
 
     let result: Result<()> = (|| async {
         // wait for the player to be available
-        let client = LmsClient::new(options.hostname.clone(), options.port);
+        let (client, mut recv) = LmsClient::new(options.hostname.clone(), options.port);
         wait_for_player(&client, &options.player_name, options.timeout).await?;
-
-        // get a listener for errors before the client is moved into the MPRIS server
-        let error_listener = client.error.listen();
 
         // start the MPRIS server
         let _connection = start_dbus_server(client, options.player_name).await?;
 
         select! {
-            _ = error_listener =>  bail!("Error from LMS") ,
+            Some (error) = recv.recv() => bail!("Error from LMS: {:?}", error),
             _ = player_process.wait() =>
             {
                 let exit_status = player_process.wait().await?;

@@ -699,7 +699,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "event-listener",
  "reqwest",
  "serde",
  "serde_json",
