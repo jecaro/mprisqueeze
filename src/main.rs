@@ -1,5 +1,6 @@
 use anyhow::{anyhow, bail, Ok, Result};
 use clap::{command, Parser};
+use discover::discover;
 use lms::LmsClient;
 use mpris::start_dbus_server;
 use std::time::Duration;
@@ -9,6 +10,7 @@ use tokio::{
     select,
     time::sleep,
 };
+mod discover;
 mod lms;
 mod mpris;
 
@@ -16,9 +18,9 @@ mod mpris;
 #[command(author, version, about, long_about = None)]
 struct Options {
     #[arg(short = 'H', long, help = "LMS hostname")]
-    hostname: String,
-    #[arg(short = 'P', long, default_value_t = 9000, help = "LMS port")]
-    port: u16,
+    hostname: Option<String>,
+    #[arg(short = 'P', long, help = "LMS port")]
+    port: Option<u16>,
     #[arg(short, long, default_value = "SqueezeLite", help = "Player name")]
     player_name: String,
     #[arg(
@@ -82,12 +84,26 @@ async fn main() -> Result<()> {
     // parse the command line options
     let options = Options::parse();
 
+    // get the hostname and port either from the command line or by discovering the server on the
+    // network
+    let (hostname, port) = match options {
+        Options {
+            hostname: Some(ref hostname),
+            port: Some(port),
+            ..
+        } => (hostname.clone(), port),
+        _ => {
+            let reply = discover().await?;
+            (reply.hostname, reply.port)
+        }
+    };
+
     // start squeezelite
     let mut player_process = start_squeezelite(&options)?;
 
     let result: Result<()> = (|| async {
         // wait for the player to be available
-        let (client, mut recv) = LmsClient::new(options.hostname.clone(), options.port);
+        let (client, mut recv) = LmsClient::new(hostname, port);
         wait_for_player(&client, &options.player_name, options.timeout).await?;
 
         // start the MPRIS server
