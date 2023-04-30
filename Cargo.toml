@@ -1,8 +1,19 @@
 [package]
 name = "mprisqueeze"
 version = "0.1.0"
+authors = ["Jean-Charles Quillet <jeancharles.quillet@gmail.com>"]
 edition = "2018"
 license = "MIT"
+description = "A command-line client for controlling squeezelite via MPRIS"
+readme = "README.md"
+homepage = "https://github.com/jecaro/mprisqueeze"
+repository = "https://github.com/jecaro/mprisqueeze"
+keywords = ["audio", "cli", "slimserver", "mpris", "squeezelite"]
+categories = ["command-line-utilities", "multimedia:audio"]
+exclude = [
+    "flake.nix",
+    "flake.lock",
+]
 
 [dependencies]
 anyhow = "1.0.70"
