@@ -338,13 +338,23 @@ fn as_mode(response: LmsResponse, key: &String) -> Result<Mode> {
 }
 
 fn as_shuffle(response: LmsResponse, key: &String) -> Result<Shuffle> {
+    fn wrong_value<T: std::fmt::Display>(value: T) -> anyhow::Error {
+        anyhow!("Expected 0, 1 or 2, got {}", value)
+    }
+
     let value = result_key(response, &key)?;
     match value {
         Value::String(s) => match s.as_str() {
             "0" => Ok(Shuffle::Off),
             "1" => Ok(Shuffle::Songs),
             "2" => Ok(Shuffle::Albums),
-            _ => bail!("Expected 0, 1 or 2, got {}", s),
+            _ => Err(wrong_value(s)),
+        },
+        Value::Number(n) => match n.as_u64() {
+            Some(0) => Ok(Shuffle::Off),
+            Some(1) => Ok(Shuffle::Songs),
+            Some(2) => Ok(Shuffle::Albums),
+            _ => Err(wrong_value(n)),
         },
         _ => bail!("Wrong top level type for shuffle: {:?}", value),
     }
