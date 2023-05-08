@@ -1,5 +1,9 @@
+//! The functions to create the requests sent to the LMS server. The requests available are
+//! described in [the LMS
+//! documentation](https://raw.githack.com/Logitech/slimserver/public/8.4/HTML/EN/html/docs/cli-api.html)
 use serde::Serialize;
 
+/// This structure is serialized to JSON and sent to the LMS server.
 #[derive(Debug, Serialize)]
 pub struct LmsRequest {
     method: String,

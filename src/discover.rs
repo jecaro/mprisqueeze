@@ -16,12 +16,14 @@ pub struct Reply {
     pub version: String,
 }
 
-// The LMS server can be discover by sending a broadcast UDP packet to port 3483.
+// The LMS server can be discovered by sending a broadcast UDP packet to port 3483.
 // Example of answer from LMS
 // "ENAME\u{10}myhostnameJSON\u{4}9000UUID$e9b557b8-92e2-45cd-8a95-8730ffd604a5VERS\u{5}8.3.1"
 // '$' = 36 in the ASCII table
 // Each value starts with a tag, followed by the length of the value in one byte, then the value
 // itself in the next length bytes.
+
+/// Discover the LMS server on the local network
 pub async fn discover() -> Result<Reply> {
     let message = "eNAME\0JSON\0UUID\0VERS\0".as_bytes();
 

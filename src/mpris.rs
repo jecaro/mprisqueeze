@@ -6,14 +6,13 @@ use zbus::{
 };
 use zbus::{Connection, ConnectionBuilder};
 
+/// Start the DBus server for a given player and expose an MPRIS interface for it. This interface
+/// is specified in [the MPRIS
+/// documentation](https://specifications.freedesktop.org/mpris-spec/latest/).
 pub async fn start_dbus_server(
     client: LmsClient,
     player_name: String,
 ) -> anyhow::Result<Connection> {
-    let root = MprisRoot {
-        name: player_name.clone(),
-    };
-
     let player = MprisPlayer {
         client,
         player_name: player_name.clone(),
@@ -21,7 +20,7 @@ pub async fn start_dbus_server(
 
     let connection = ConnectionBuilder::session()?
         .name(format!("org.mpris.MediaPlayer2.{}", player_name))?
-        .serve_at("/org/mpris/MediaPlayer2", root)?
+        .serve_at("/org/mpris/MediaPlayer2", MprisRoot {})?
         .serve_at("/org/mpris/MediaPlayer2", player)?
         .build()
         .await?;
@@ -29,9 +28,7 @@ pub async fn start_dbus_server(
     Ok(connection)
 }
 
-struct MprisRoot {
-    name: String,
-}
+struct MprisRoot {}
 
 #[dbus_interface(name = "org.mpris.MediaPlayer2")]
 impl MprisRoot {
@@ -55,7 +52,7 @@ impl MprisRoot {
 
     #[dbus_interface(property)]
     async fn identity(&self) -> String {
-        self.name.clone()
+        "squeezelite".to_string()
     }
 
     #[dbus_interface(property)]

@@ -1,3 +1,5 @@
+//! The functions to talk to the LMS server. LMS accepts and returns JSON data. The requests are
+//! created using the functions in the [request] module.
 use crate::lms::request::LmsRequest;
 use anyhow::bail;
 use anyhow::{anyhow, Ok, Result};
@@ -26,8 +28,11 @@ pub enum Shuffle {
 
 #[derive(Debug)]
 pub struct LmsClient {
+    /// The HTTP client
     client: Client,
+    /// The URL to reach the LMS server
     url: String,
+    /// The channel to report errors
     sender: mpsc::Sender<anyhow::Error>,
 }
 
@@ -56,10 +61,10 @@ impl LmsClient {
     pub async fn get_version(&self) -> Result<String> {
         self.handle_error(
             (|| async {
-                let (request, key) = LmsRequest::version();
+                let (request, field) = LmsRequest::version();
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_string(lms_response, &key)
+                as_string(lms_response, &field)
             })()
             .await,
             anyhow!("Error get_version"),
@@ -71,10 +76,10 @@ impl LmsClient {
     pub async fn get_connected(&self, name: String) -> Result<bool> {
         self.handle_error(
             (|| async {
-                let (request, key) = LmsRequest::connected(name);
+                let (request, field) = LmsRequest::connected(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_bool(lms_response, &key)
+                as_bool(lms_response, &field)
             })()
             .await,
             anyhow!("Error get_connected"),
@@ -85,10 +90,10 @@ impl LmsClient {
     pub async fn get_player_count(&self) -> Result<u64> {
         self.handle_error(
             (|| async {
-                let (request, key) = LmsRequest::player_count();
+                let (request, field) = LmsRequest::player_count();
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_u64(lms_response, &key)
+                as_u64(lms_response, &field)
             })()
             .await,
             anyhow!("Error player_count"),
@@ -99,10 +104,10 @@ impl LmsClient {
     pub async fn get_players(&self) -> Result<Vec<Player>> {
         self.handle_error(
             (|| async {
-                let (request, key) = LmsRequest::players();
+                let (request, field) = LmsRequest::players();
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                let value = result_key(lms_response, &key)?.clone();
+                let value = result_field(lms_response, &field)?.clone();
                 serde_json::from_value(value.to_owned()).map_err(|e| e.into())
             })()
             .await,
@@ -114,10 +119,10 @@ impl LmsClient {
     pub async fn get_index(&self, name: String) -> Result<u64> {
         self.handle_error(
             (|| async {
-                let (request, key) = LmsRequest::index(name);
+                let (request, field) = LmsRequest::index(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_u64(lms_response, &key)
+                as_u64(lms_response, &field)
             })()
             .await,
             anyhow!("Error get_index"),
@@ -128,10 +133,10 @@ impl LmsClient {
     pub async fn get_track_count(&self, name: String) -> Result<u64> {
         self.handle_error(
             (|| async {
-                let (request, key) = LmsRequest::track_count(name);
+                let (request, field) = LmsRequest::track_count(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_u64(lms_response, &key)
+                as_u64(lms_response, &field)
             })()
             .await,
             anyhow!("Error get_track_count"),
@@ -142,10 +147,10 @@ impl LmsClient {
     pub async fn get_shuffle(&self, name: String) -> Result<Shuffle> {
         self.handle_error(
             (|| async {
-                let (request, key) = LmsRequest::shuffle(name);
+                let (request, field) = LmsRequest::shuffle(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_shuffle(lms_response, &key)
+                as_shuffle(lms_response, &field)
             })()
             .await,
             anyhow!("Error get_shuffle"),
@@ -156,10 +161,10 @@ impl LmsClient {
     pub async fn get_mode(&self, name: String) -> Result<Mode> {
         self.handle_error(
             (|| async {
-                let (request, key) = LmsRequest::mode(name);
+                let (request, field) = LmsRequest::mode(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_mode(lms_response, &key)
+                as_mode(lms_response, &field)
             })()
             .await,
             anyhow!("Error get_mode"),
@@ -167,17 +172,17 @@ impl LmsClient {
         .await
     }
 
-    // When the playlist is empty, the key is not here. The "result" field contains an empty
+    // When the playlist is empty, the `field` is not here. The `result` field contains an empty
     // object.
     pub async fn get_artist(&self, name: String) -> Result<Option<String>> {
         self.handle_error(
             (|| async {
-                let (request, key) = LmsRequest::artist(name);
+                let (request, field) = LmsRequest::artist(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_string(lms_response, &key).map(Some).or_else(|e| {
+                as_string(lms_response, &field).map(Some).or_else(|e| {
                     match e.downcast_ref::<ResultError>() {
-                        Some(ResultError::NoKey { .. }) => Ok(None),
+                        Some(ResultError::NoField { .. }) => Ok(None),
                         _ => Err(e),
                     }
                 })
@@ -188,16 +193,16 @@ impl LmsClient {
         .await
     }
 
-    // Same remark as get_artist
+    // Same remark as [`get_artist`]
     pub async fn get_current_title(&self, name: String) -> Result<Option<String>> {
         self.handle_error(
             (|| async {
-                let (request, key) = LmsRequest::current_title(name);
+                let (request, field) = LmsRequest::current_title(name);
                 let response = self.post(&request).await?;
                 let lms_response = response.json().await?;
-                as_string(lms_response, &key).map(Some).or_else(|e| {
+                as_string(lms_response, &field).map(Some).or_else(|e| {
                     match e.downcast_ref::<ResultError>() {
-                        Some(ResultError::NoKey { .. }) => Ok(None),
+                        Some(ResultError::NoField { .. }) => Ok(None),
                         _ => Err(e),
                     }
                 })
@@ -256,7 +261,7 @@ impl LmsClient {
         .await
     }
 
-    // The error is not passed to the client but send to the error channel.
+    // The error is not passed to the client but sent to the error channel
     async fn handle_error<T>(&self, result: Result<T>, error: anyhow::Error) -> Result<T> {
         match result {
             Result::Ok(s) => Ok(s),
@@ -286,6 +291,8 @@ impl LmsClient {
     }
 }
 
+/// The response sent by LMS is a JSON object with this structure. The actual payload is in the
+/// result field.
 #[derive(Clone, Debug, Deserialize)]
 struct LmsResponse {
     #[allow(dead_code)]
@@ -296,8 +303,8 @@ struct LmsResponse {
     result: serde_json::Value,
 }
 
-fn as_bool(response: LmsResponse, key: &String) -> Result<bool> {
-    let value = result_key(response, key)?;
+fn as_bool(response: LmsResponse, field: &String) -> Result<bool> {
+    let value = result_field(response, field)?;
     match value {
         Value::Number(n) => n
             .as_i64()
@@ -307,8 +314,8 @@ fn as_bool(response: LmsResponse, key: &String) -> Result<bool> {
     }
 }
 
-fn as_u64(response: LmsResponse, key: &String) -> Result<u64> {
-    let value = result_key(response, key)?;
+fn as_u64(response: LmsResponse, field: &String) -> Result<u64> {
+    let value = result_field(response, field)?;
     match value {
         Value::String(n) => n.parse::<u64>().map_err(|e| e.into()),
         Value::Number(n) => n.as_u64().ok_or_else(|| anyhow!("{} is not an u64", n)),
@@ -316,16 +323,16 @@ fn as_u64(response: LmsResponse, key: &String) -> Result<u64> {
     }
 }
 
-fn as_string(response: LmsResponse, key: &String) -> Result<String> {
-    let value = result_key(response, key)?;
+fn as_string(response: LmsResponse, field: &String) -> Result<String> {
+    let value = result_field(response, field)?;
     match value {
         Value::String(s) => Ok(s.clone()),
         _ => bail!("Wrong top level type for string: {:?}", value),
     }
 }
 
-fn as_mode(response: LmsResponse, key: &String) -> Result<Mode> {
-    let value = result_key(response, &key)?;
+fn as_mode(response: LmsResponse, field: &String) -> Result<Mode> {
+    let value = result_field(response, &field)?;
     match value {
         Value::String(s) => match s.as_str() {
             "stop" => Ok(Mode::Stop),
@@ -337,12 +344,12 @@ fn as_mode(response: LmsResponse, key: &String) -> Result<Mode> {
     }
 }
 
-fn as_shuffle(response: LmsResponse, key: &String) -> Result<Shuffle> {
+fn as_shuffle(response: LmsResponse, field: &String) -> Result<Shuffle> {
     fn wrong_value<T: std::fmt::Display>(value: T) -> anyhow::Error {
         anyhow!("Expected 0, 1 or 2, got {}", value)
     }
 
-    let value = result_key(response, &key)?;
+    let value = result_field(response, &field)?;
     match value {
         Value::String(s) => match s.as_str() {
             "0" => Ok(Shuffle::Off),
@@ -362,23 +369,26 @@ fn as_shuffle(response: LmsResponse, key: &String) -> Result<Shuffle> {
 
 #[derive(Debug, Error)]
 enum ResultError {
-    #[error("The result key has the wrong type: {response:?}")]
+    #[error("The result field has the wrong type: {response:?}")]
     ResultHasWrongType { response: LmsResponse },
-    #[error("Unable to get key {key} in {response:?}")]
-    NoKey { response: LmsResponse, key: String },
+    #[error("Unable to get field {field} in {response:?}")]
+    NoField {
+        response: LmsResponse,
+        field: String,
+    },
 }
 
-fn result_key(response: LmsResponse, key: &String) -> Result<Value> {
+fn result_field(response: LmsResponse, field: &String) -> Result<Value> {
     let mut result = match response.result {
         Value::Object(ref map) => Ok(map.clone()),
         _ => Err(anyhow!(ResultError::ResultHasWrongType {
             response: response.clone()
         })),
     }?;
-    result.remove(key).ok_or_else(|| {
-        anyhow!(ResultError::NoKey {
+    result.remove(field).ok_or_else(|| {
+        anyhow!(ResultError::NoField {
             response: response,
-            key: key.clone()
+            field: field.clone()
         })
     })
 }

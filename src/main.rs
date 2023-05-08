@@ -38,6 +38,7 @@ struct Options {
     player_command: Vec<String>,
 }
 
+/// Wait for maximum `timeout` seconds for the player to be available
 async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) -> Result<()> {
     let sleep = sleep(Duration::from_secs(timeout));
     pin!(sleep);
@@ -58,6 +59,7 @@ async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) ->
     }
 }
 
+/// Start the `squeezelite` process
 fn start_squeezelite(options: &Options) -> Result<Child> {
     let (player_command, player_args) = match options.player_command[..] {
         [] => bail!("No player command given"),
