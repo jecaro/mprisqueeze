@@ -4,7 +4,6 @@ use crate::lms::request::LmsRequest;
 use anyhow::bail;
 use anyhow::{anyhow, Ok, Result};
 use reqwest::Client;
-use reqwest::Response;
 use serde::Deserialize;
 use serde_json::Value;
 use thiserror::Error;
@@ -62,8 +61,7 @@ impl LmsClient {
         self.handle_error(
             (|| async {
                 let (request, field) = LmsRequest::version();
-                let response = self.post(&request).await?;
-                let lms_response = response.json().await?;
+                let lms_response = self.post(&request).await?;
                 as_string(lms_response, &field)
             })()
             .await,
@@ -77,8 +75,7 @@ impl LmsClient {
         self.handle_error(
             (|| async {
                 let (request, field) = LmsRequest::connected(name);
-                let response = self.post(&request).await?;
-                let lms_response = response.json().await?;
+                let lms_response = self.post(&request).await?;
                 as_bool(lms_response, &field)
             })()
             .await,
@@ -91,8 +88,7 @@ impl LmsClient {
         self.handle_error(
             (|| async {
                 let (request, field) = LmsRequest::player_count();
-                let response = self.post(&request).await?;
-                let lms_response = response.json().await?;
+                let lms_response = self.post(&request).await?;
                 as_u64(lms_response, &field)
             })()
             .await,
@@ -105,8 +101,7 @@ impl LmsClient {
         self.handle_error(
             (|| async {
                 let (request, field) = LmsRequest::players();
-                let response = self.post(&request).await?;
-                let lms_response = response.json().await?;
+                let lms_response = self.post(&request).await?;
                 let value = result_field(lms_response, &field)?.clone();
                 serde_json::from_value(value.to_owned()).map_err(|e| e.into())
             })()
@@ -120,8 +115,7 @@ impl LmsClient {
         self.handle_error(
             (|| async {
                 let (request, field) = LmsRequest::index(name);
-                let response = self.post(&request).await?;
-                let lms_response = response.json().await?;
+                let lms_response = self.post(&request).await?;
                 as_u64(lms_response, &field)
             })()
             .await,
@@ -134,8 +128,7 @@ impl LmsClient {
         self.handle_error(
             (|| async {
                 let (request, field) = LmsRequest::track_count(name);
-                let response = self.post(&request).await?;
-                let lms_response = response.json().await?;
+                let lms_response = self.post(&request).await?;
                 as_u64(lms_response, &field)
             })()
             .await,
@@ -148,8 +141,7 @@ impl LmsClient {
         self.handle_error(
             (|| async {
                 let (request, field) = LmsRequest::shuffle(name);
-                let response = self.post(&request).await?;
-                let lms_response = response.json().await?;
+                let lms_response = self.post(&request).await?;
                 as_shuffle(lms_response, &field)
             })()
             .await,
@@ -162,8 +154,7 @@ impl LmsClient {
         self.handle_error(
             (|| async {
                 let (request, field) = LmsRequest::mode(name);
-                let response = self.post(&request).await?;
-                let lms_response = response.json().await?;
+                let lms_response = self.post(&request).await?;
                 as_mode(lms_response, &field)
             })()
             .await,
@@ -178,8 +169,7 @@ impl LmsClient {
         self.handle_error(
             (|| async {
                 let (request, field) = LmsRequest::artist(name);
-                let response = self.post(&request).await?;
-                let lms_response = response.json().await?;
+                let lms_response = self.post(&request).await?;
                 as_string(lms_response, &field).map(Some).or_else(|e| {
                     match e.downcast_ref::<ResultError>() {
                         Some(ResultError::NoField { .. }) => Ok(None),
@@ -198,8 +188,7 @@ impl LmsClient {
         self.handle_error(
             (|| async {
                 let (request, field) = LmsRequest::current_title(name);
-                let response = self.post(&request).await?;
-                let lms_response = response.json().await?;
+                let lms_response = self.post(&request).await?;
                 as_string(lms_response, &field).map(Some).or_else(|e| {
                     match e.downcast_ref::<ResultError>() {
                         Some(ResultError::NoField { .. }) => Ok(None),
@@ -272,22 +261,13 @@ impl LmsClient {
         }
     }
 
-    async fn post(&self, request: &LmsRequest) -> Result<Response> {
-        self.client
-            .post(&self.url)
-            .json(&request)
-            .send()
-            .await
-            .map_err(|e| e.into())
+    async fn post(&self, request: &LmsRequest) -> Result<LmsResponse> {
+        let response = self.client.post(&self.url).json(&request).send().await?;
+        response.json().await.map_err(|e| e.into())
     }
 
     async fn post_no_result(&self, request: &LmsRequest) -> Result<()> {
-        let response = self.post(&request).await?;
-        response
-            .json::<LmsResponse>()
-            .await
-            .map(|_| ())
-            .map_err(|e| e.into())
+        self.post(&request).await.map(|_| ()).map_err(|e| e.into())
     }
 }
 
