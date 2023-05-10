@@ -1,4 +1,5 @@
 use anyhow::Result;
+use log::info;
 use nom::{
     bytes::{self, complete::tag},
     combinator::{flat_map, map, map_res},
@@ -25,6 +26,7 @@ pub struct Reply {
 
 /// Discover the LMS server on the local network
 pub async fn discover() -> Result<Reply> {
+    info!("Discovering LMS server on the local network");
     let message = "eNAME\0JSON\0UUID\0VERS\0".as_bytes();
 
     let sock = UdpSocket::bind("0.0.0.0:0").await?;
@@ -36,7 +38,13 @@ pub async fn discover() -> Result<Reply> {
     let _ = sock.recv_from(&mut buf).await?;
 
     parse_reply(&buf)
-        .map(|(_, reply)| reply)
+        .map(|(_, reply)| {
+            info!(
+                "Found LMS server: {}:{} ({})",
+                reply.hostname, reply.port, reply.version
+            );
+            reply
+        })
         .map_err(|error| error.to_owned().into())
 }
 

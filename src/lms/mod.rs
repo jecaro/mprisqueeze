@@ -3,6 +3,7 @@
 use crate::lms::request::LmsRequest;
 use anyhow::bail;
 use anyhow::{anyhow, Ok, Result};
+use log::debug;
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::Value;
@@ -251,9 +252,16 @@ impl LmsClient {
     }
 
     // The error is not passed to the client but sent to the error channel
-    async fn handle_error<T>(&self, result: Result<T>, error: anyhow::Error) -> Result<T> {
+    async fn handle_error<T: std::fmt::Debug>(
+        &self,
+        result: Result<T>,
+        error: anyhow::Error,
+    ) -> Result<T> {
         match result {
-            Result::Ok(s) => Ok(s),
+            Result::Ok(s) => {
+                debug!("Converted as: {:?}", s);
+                Ok(s)
+            }
             Err(error_from_result) => {
                 self.sender.send(error_from_result).await?;
                 Err(error)
@@ -262,12 +270,23 @@ impl LmsClient {
     }
 
     async fn post(&self, request: &LmsRequest) -> Result<LmsResponse> {
+        debug!("Sending: {:?}", request);
         let response = self.client.post(&self.url).json(&request).send().await?;
-        response.json().await.map_err(|e| e.into())
+        response
+            .json()
+            .await
+            .map(|response| {
+                debug!("Received: {:?}", response);
+                response
+            })
+            .map_err(|error| error.into())
     }
 
     async fn post_no_result(&self, request: &LmsRequest) -> Result<()> {
-        self.post(&request).await.map(|_| ()).map_err(|e| e.into())
+        self.post(&request)
+            .await
+            .map(|_| ())
+            .map_err(|error| error.into())
     }
 }
 

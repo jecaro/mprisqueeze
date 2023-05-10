@@ -2,6 +2,7 @@ use anyhow::{anyhow, bail, Ok, Result};
 use clap::{command, Parser};
 use discover::discover;
 use lms::LmsClient;
+use log::{debug, info};
 use mpris::start_dbus_server;
 use std::time::Duration;
 use tokio::{
@@ -40,6 +41,7 @@ struct Options {
 
 /// Wait for maximum `timeout` seconds for the player to be available
 async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) -> Result<()> {
+    info!("Waiting for player {} to be available", player_name);
     let sleep = sleep(Duration::from_secs(timeout));
     pin!(sleep);
     loop {
@@ -50,6 +52,7 @@ async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) ->
                 if let Result::Ok(true) = count.as_ref().map(|count| *count != 0) {
                     let players = client.get_players().await?;
                     if players.iter().any(|player| player.name == player_name) {
+                        info!("Player {} is available", player_name);
                         break Ok(());
                     }
                 }
@@ -75,6 +78,10 @@ fn start_squeezelite(options: &Options) -> Result<Child> {
         .map(|arg| arg.replace("{}", &options.player_name))
         .collect::<Vec<_>>();
 
+    info!(
+        "Starting player: {} {:?}",
+        player_command, player_args_with_name
+    );
     Command::new(player_command)
         .args(player_args_with_name)
         .spawn()
@@ -83,8 +90,11 @@ fn start_squeezelite(options: &Options) -> Result<Child> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    env_logger::init();
+
     // parse the command line options
     let options = Options::parse();
+    debug!("Options: {:?}", options);
 
     // get the hostname and port either from the command line or by discovering the server on the
     // network
@@ -125,8 +135,11 @@ async fn main() -> Result<()> {
     })()
     .await;
 
-    // kill the player process no matter what
-    player_process.kill().await?;
+    // kill the player process if it is still running
+    if player_process.id().is_some() {
+        info!("Killing player process");
+        player_process.kill().await?;
+    }
 
     result
 }
