@@ -1,5 +1,7 @@
 # mprisqueeze
 
+[![CI][status-png]][status]
+
 `mprisqueeze` is a wrapper over [squeezelite]. It starts [squeezelite] in the 
 background and exposes an [MPRIS] interface to control it with [MPRIS] clients 
 such as [playerctl].
@@ -30,6 +32,8 @@ Note that `mprisqueeze` must know the name [squeezelite] will use. Therefore
 the [squeezelite] command line must contains the string `{}`. It is replaced by 
 the player name when starting the process.
 
+[status]: https://github.com/jecaro/mprisqueeze/actions
+[status-png]: https://github.com/jecaro/mprisqueeze/workflows/CI/badge.svg
 [MPRIS]: https://specifications.freedesktop.org/mpris-spec/latest/
 [squeezelite]: https://github.com/ralph-irving/squeezelite
 [playerctl]: https://github.com/altdesktop/playerctl
