@@ -9,7 +9,7 @@ use tokio::{
     pin,
     process::{Child, Command},
     select,
-    time::sleep,
+    time::{sleep, timeout},
 };
 mod discover;
 mod lms;
@@ -25,12 +25,19 @@ struct Options {
     #[arg(short, long, default_value = "SqueezeLite", help = "Player name")]
     player_name: String,
     #[arg(
-        short,
+        short = 't',
         long,
         default_value_t = 3,
         help = "Timeout in seconds for squeezelite to be recognized by LMS"
     )]
-    timeout: u64,
+    player_timeout: u64,
+    #[arg(
+        short = 'T',
+        long,
+        default_value_t = 3,
+        help = "Timeout in seconds for LMS discovery"
+    )]
+    discover_timeout: u64,
     #[arg(
         last = true,
         default_values_t = vec!["squeezelite".to_string(), "-n".to_string(), "{}".to_string()],
@@ -105,7 +112,8 @@ async fn main() -> Result<()> {
             ..
         } => (hostname.clone(), port),
         _ => {
-            let reply = discover().await?;
+            let reply =
+                timeout(Duration::from_secs(options.discover_timeout), discover()).await??;
             (reply.hostname, reply.port)
         }
     };
@@ -116,7 +124,7 @@ async fn main() -> Result<()> {
     let result: Result<()> = (|| async {
         // wait for the player to be available
         let (client, mut recv) = LmsClient::new(hostname, port);
-        wait_for_player(&client, &options.player_name, options.timeout).await?;
+        wait_for_player(&client, &options.player_name, options.player_timeout).await?;
 
         // start the MPRIS server
         let _connection = start_dbus_server(client, options.player_name).await?;

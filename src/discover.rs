@@ -7,6 +7,7 @@ use nom::{
     sequence::{preceded, tuple},
     IResult,
 };
+use std::io::ErrorKind;
 use tokio::net::UdpSocket;
 
 #[derive(Debug)]
@@ -33,9 +34,18 @@ pub async fn discover() -> Result<Reply> {
     sock.set_broadcast(true)?;
 
     let mut buf = [0; 1024];
-    let _ = sock.send_to(&message, "255.255.255.255:3483").await?;
+    loop {
+        let _ = sock.send_to(&message, "255.255.255.255:3483").await?;
 
-    let _ = sock.recv_from(&mut buf).await?;
+        match sock.try_recv(&mut buf) {
+            Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
+                continue;
+            }
+            anything_else => {
+                break anything_else;
+            }
+        }
+    }?;
 
     parse_reply(&buf)
         .map(|(_, reply)| {
