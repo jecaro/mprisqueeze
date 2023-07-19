@@ -13,8 +13,6 @@
         in
         naersk'.buildPackage {
           src = ./.;
-          nativeBuildInputs = with pkgs; [ pkg-config ];
-          buildInputs = with pkgs; [ openssl ];
         };
 
     in
@@ -35,8 +33,6 @@
             nativeBuildInputs = with pkgs;
               [
                 cargo
-                openssl
-                pkg-config
                 rust-analyzer
                 rustc
                 rustfmt
