@@ -1,5 +1,5 @@
 use anyhow::Result;
-use log::info;
+use log::{info, warn};
 use nom::{
     bytes::{self, complete::tag},
     combinator::{flat_map, map, map_res},
@@ -7,8 +7,8 @@ use nom::{
     sequence::{preceded, tuple},
     IResult,
 };
-use std::io::ErrorKind;
-use tokio::net::UdpSocket;
+use std::time::Duration;
+use tokio::{net::UdpSocket, time::timeout};
 
 #[derive(Debug)]
 pub struct Reply {
@@ -26,26 +26,22 @@ pub struct Reply {
 // itself in the next length bytes.
 
 /// Discover the LMS server on the local network
-pub async fn discover() -> Result<Reply> {
+pub async fn discover(reply_timeout: Duration) -> Result<Reply> {
     info!("Discovering LMS server on the local network");
-    let message = "eNAME\0JSON\0UUID\0VERS\0".as_bytes();
 
     let sock = UdpSocket::bind("0.0.0.0:0").await?;
     sock.set_broadcast(true)?;
 
     let mut buf = [0; 1024];
-    loop {
-        let _ = sock.send_to(&message, "255.255.255.255:3483").await?;
 
-        match sock.try_recv(&mut buf) {
-            Err(ref e) if e.kind() == ErrorKind::WouldBlock => {
-                continue;
-            }
-            anything_else => {
-                break anything_else;
-            }
+    loop {
+        let response = timeout(reply_timeout, broasdcast_and_recv(&mut buf, &sock)).await;
+        match response {
+            Ok(Ok(())) => break,
+            Ok(Err(e)) => return Err(e.into()),
+            Err(_) => warn!("Timeout waiting for LMS reply, retrying..."),
         }
-    }?;
+    }
 
     parse_reply(&buf)
         .map(|(_, reply)| {
@@ -56,6 +52,13 @@ pub async fn discover() -> Result<Reply> {
             reply
         })
         .map_err(|error| error.to_owned().into())
+}
+
+async fn broasdcast_and_recv(buf: &mut [u8], sock: &UdpSocket) -> Result<()> {
+    let message = "eNAME\0JSON\0UUID\0VERS\0".as_bytes();
+    let _ = sock.send_to(&message, "255.255.255.255:3483").await?;
+    let _ = sock.recv(buf).await?;
+    Ok(())
 }
 
 fn parse_tag<'a>(input: &'a [u8], start_tag: &str) -> IResult<&'a [u8], String> {

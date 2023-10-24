@@ -13,24 +13,33 @@ network. To specify a host and a port:
 $ mprisqueeze -H somehost -P 9000
 ```
 
-The default command line for [squeezelite] is: `squeezelite -n SqueezeLite`. It 
-starts [squeezelite] registering itself on [LMS] with the name `SqueezeLite`. 
-To use another name, one can use:
+The default command line for [squeezelite] is:
+
+```
+squeezelite -n {name} -s {server}
+```
+
+Before calling [squeezelite], `mprisqueeze` replaces:
+- `{name}` by the name of the player, `Squeezelite` by default
+- `{server}` by the LMS server IP, either automatically discovered either set 
+  with the `-H` switch
+
+It then starts [squeezelite] registering itself on [LMS] with the name 
+`SqueezeLite`. To use another name, one can use:
 
 ```bash
 $ mprisqueeze -p my-player
 ```
 
 The command to start [squeezelite] can be changed with the last arguments, 
-preceded by a `--`, for example:
+preceded by `--`, for example:
 
 ```bash
-$ mprisqueeze -- squeezelite -f ./squeezelite.log -n {}
+$ mprisqueeze -- squeezelite -f ./squeezelite.log -n {name} -s {server}
 ```
 
-Note that `mprisqueeze` must know the name [squeezelite] will use. Therefore 
-the [squeezelite] command line must contains the string `{}`. It is replaced by 
-the player name when starting the process.
+Note that when using a custom command, both parameters must be present on the 
+command line: `{name}` and `{server}`.
 
 [status]: https://github.com/jecaro/mprisqueeze/actions
 [status-png]: https://github.com/jecaro/mprisqueeze/workflows/CI/badge.svg

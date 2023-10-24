@@ -32,16 +32,25 @@ struct Options {
     )]
     player_timeout: u64,
     #[arg(
-        short = 'T',
+        short = 'd',
         long,
         default_value_t = 3,
         help = "Timeout in seconds for LMS discovery"
     )]
     discover_timeout: u64,
     #[arg(
+        short = 'r',
+        long,
+        default_value_t = 100,
+        help = "Timeout in milliseconds for LMS to reply to the discovery message"
+    )]
+    discover_reply_timeout: u64,
+    #[arg(
         last = true,
-        default_values_t = vec!["squeezelite".to_string(), "-n".to_string(), "{}".to_string()],
-        help = "Player command and arguments. The string '{}' will be replaced with the player name."
+        default_values_t = vec!["squeezelite-pulse".to_string(), "-n".to_string(),
+            "{name}".to_string(), "-s".to_string(), "{server}".to_string()],
+        help = "Player command and arguments. The string '{name}' will be replaced with the player\
+                name, '{server}' with the LMS server name."
     )]
     player_command: Vec<String>,
 }
@@ -70,19 +79,22 @@ async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) ->
 }
 
 /// Start the `squeezelite` process
-fn start_squeezelite(options: &Options) -> Result<Child> {
+fn start_squeezelite(options: &Options, server: &String) -> Result<Child> {
     let (player_command, player_args) = match options.player_command[..] {
         [] => bail!("No player command given"),
         [ref player_command, ref player_args @ ..] => Ok((player_command, player_args)),
     }?;
 
-    // put the player name into the command line arguments
-    if !player_args.iter().any(|arg| arg.contains("{}")) {
-        bail!("Player args must contain the string {{}} to be replaced with the player name");
+    if !player_args.iter().any(|arg| arg.contains("{name}")) {
+        bail!("Player args must contain the string {{name}} to be replaced with the player name");
+    }
+    if !player_args.iter().any(|arg| arg.contains("{server}")) {
+        bail!("Player args must contain the string {{server}} to be replaced with the server name");
     }
     let player_args_with_name = player_args
         .iter()
-        .map(|arg| arg.replace("{}", &options.player_name))
+        .map(|arg| arg.replace("{name}", &options.player_name))
+        .map(|arg| arg.replace("{server}", &server))
         .collect::<Vec<_>>();
 
     info!(
@@ -112,14 +124,18 @@ async fn main() -> Result<()> {
             ..
         } => (hostname.clone(), port),
         _ => {
-            let reply =
-                timeout(Duration::from_secs(options.discover_timeout), discover()).await??;
+            let reply = timeout(
+                Duration::from_secs(options.discover_timeout),
+                discover(Duration::from_millis(options.discover_reply_timeout)),
+            )
+            .await??;
+            println!("Discovered LMS at {}:{}", reply.hostname, reply.port);
             (reply.hostname, reply.port)
         }
     };
 
     // start squeezelite
-    let mut player_process = start_squeezelite(&options)?;
+    let mut player_process = start_squeezelite(&options, &hostname)?;
 
     let result: Result<()> = (|| async {
         // wait for the player to be available
