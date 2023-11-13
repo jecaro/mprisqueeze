@@ -41,6 +41,31 @@ $ mprisqueeze -- squeezelite -f ./squeezelite.log -n {name} -s {server}
 Note that when using a custom command, both parameters must be present on the 
 command line: `{name}` and `{server}`.
 
+`mprisqueeze` can be automatically started on login. The most convenient way of 
+doing that is using a user systemd unit. For example, one can set a unit called 
+`mprisqueeze` in the file `~/.config/systemd/user/mprisqueeze.service`:
+
+```systemd
+[Install]
+WantedBy=default.target
+
+[Service]
+ExecStart=mprisqueeze -- squeezelite-pulse -n {name} -s {server}
+Restart=always
+RestartSec=3
+Type=simple
+
+[Unit]
+Description=mprisqueeze
+```
+
+On the next login, `mprisqueeze` will be automatically started. Otherwise, to 
+start it manually:
+
+```bash
+$ systemctl --user start mprisqueeze
+```
+
 [status]: https://github.com/jecaro/mprisqueeze/actions
 [status-png]: https://github.com/jecaro/mprisqueeze/workflows/CI/badge.svg
 [MPRIS]: https://specifications.freedesktop.org/mpris-spec/latest/
