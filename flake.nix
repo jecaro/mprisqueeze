@@ -13,6 +13,7 @@
         in
         naersk'.buildPackage {
           src = ./.;
+          meta.mainProgram = "mprisqueeze";
         };
 
     in
@@ -26,10 +27,10 @@
         in
         {
           # For `nix build` & `nix run`:
-          defaultPackage = derivation pkgs;
+          packages.default = derivation pkgs;
 
           # For `nix develop`:
-          devShell = pkgs.mkShell {
+          devShells.default = pkgs.mkShell {
             nativeBuildInputs = with pkgs;
               [
                 cargo
