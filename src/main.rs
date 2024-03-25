@@ -20,8 +20,8 @@ mod mpris;
 struct Options {
     #[arg(short = 'H', long, help = "LMS hostname")]
     hostname: Option<String>,
-    #[arg(short = 'P', long, help = "LMS port")]
-    port: Option<u16>,
+    #[arg(short = 'P', long, help = "LMS port", default_value_t = 9000)]
+    port: u16,
     #[arg(short, long, default_value = "SqueezeLite", help = "Player name")]
     player_name: String,
     #[arg(
@@ -120,7 +120,7 @@ async fn main() -> Result<()> {
     let (hostname, port) = match options {
         Options {
             hostname: Some(ref hostname),
-            port: Some(port),
+            port,
             ..
         } => (hostname.clone(), port),
         _ => {
