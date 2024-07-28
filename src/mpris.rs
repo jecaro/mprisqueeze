@@ -2,7 +2,7 @@ use crate::lms::{LmsClient, Mode, Shuffle};
 use log::{debug, info};
 use std::{collections::HashMap, convert::TryFrom, result};
 use zbus::{
-    dbus_interface, fdo,
+    fdo, interface,
     zvariant::{ObjectPath, Value},
 };
 use zbus::{Connection, ConnectionBuilder};
@@ -33,7 +33,7 @@ pub async fn start_dbus_server(
 
 struct MprisRoot {}
 
-#[dbus_interface(name = "org.mpris.MediaPlayer2")]
+#[interface(name = "org.mpris.MediaPlayer2")]
 impl MprisRoot {
     async fn raise(&self) {
         debug!("MprisRoot::raise");
@@ -43,36 +43,36 @@ impl MprisRoot {
         debug!("MprisRoot::quit");
     }
 
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn can_quit(&self) -> bool {
         debug!("MprisRoot::can_quit");
         false
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn can_raise(&self) -> bool {
         debug!("MprisRoot::can_raise");
         false
     }
 
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn has_track_list(&self) -> bool {
         debug!("MprisRoot::has_track_list");
         false
     }
 
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn identity(&self) -> String {
         debug!("MprisRoot::identity");
         "squeezelite".to_string()
     }
 
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn supported_uri_schemes(&self) -> Vec<String> {
         debug!("MprisRoot::supported_uri_schemes");
         vec![]
     }
 
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn supported_mime_types(&self) -> Vec<String> {
         debug!("MprisRoot::supported_mime_types");
         vec![]
@@ -88,7 +88,7 @@ fn to_fdo_error(err: anyhow::Error) -> fdo::Error {
     fdo::Error::Failed(err.to_string())
 }
 
-#[dbus_interface(name = "org.mpris.MediaPlayer2.Player")]
+#[interface(name = "org.mpris.MediaPlayer2.Player")]
 impl MprisPlayer {
     async fn next(&self) -> Result<(), fdo::Error> {
         debug!("MprisPlayer::next");
@@ -144,7 +144,7 @@ impl MprisPlayer {
         debug!("MprisPlayer::open_uri {}", uri);
     }
 
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn playback_status(&self) -> result::Result<String, fdo::Error> {
         debug!("MprisPlayer::playback_status");
         let mode = self
@@ -159,16 +159,16 @@ impl MprisPlayer {
         }
         .to_string())
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn loop_status(&self) -> String {
         debug!("MprisPlayer::loop_status");
         "None".to_string()
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn rate(&self) -> f64 {
         1.0
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn shuffle(&self) -> result::Result<bool, fdo::Error> {
         debug!("MprisPlayer::shuffle");
         let shuffle = self
@@ -179,7 +179,7 @@ impl MprisPlayer {
 
         Ok(shuffle == Shuffle::Songs)
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn metadata(&self) -> result::Result<HashMap<String, Value>, fdo::Error> {
         debug!("MprisPlayer::metadata");
         let track_count = self
@@ -221,52 +221,52 @@ impl MprisPlayer {
         });
         Ok(hm)
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn volume(&self) -> f64 {
         debug!("MprisPlayer::volume");
         1.0
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn position(&self) -> i64 {
         debug!("MprisPlayer::position");
         0
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn minimum_rate(&self) -> f64 {
         debug!("MprisPlayer::minimum_rate");
         1.0
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn maximum_rate(&self) -> f64 {
         debug!("MprisPlayer::maximum_rate");
         1.0
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn can_go_next(&self) -> bool {
         debug!("MprisPlayer::can_go_next");
         true
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn can_go_previous(&self) -> bool {
         debug!("MprisPlayer::can_go_previous");
         true
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn can_play(&self) -> bool {
         debug!("MprisPlayer::can_play");
         true
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn can_pause(&self) -> bool {
         debug!("MprisPlayer::can_pause");
         true
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn can_seek(&self) -> bool {
         debug!("MprisPlayer::can_seek");
         false
     }
-    #[dbus_interface(property)]
+    #[zbus(property)]
     async fn can_control(&self) -> bool {
         debug!("MprisPlayer::can_control");
         true
