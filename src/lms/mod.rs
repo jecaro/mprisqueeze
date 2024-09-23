@@ -171,12 +171,7 @@ impl LmsClient {
             (|| async {
                 let (request, field) = LmsRequest::artist(name);
                 let lms_response = self.post(&request).await?;
-                as_string(lms_response, &field).map(Some).or_else(|e| {
-                    match e.downcast_ref::<ResultError>() {
-                        Some(ResultError::NoField { .. }) => Ok(None),
-                        _ => Err(e),
-                    }
-                })
+                as_string_or_not_there(lms_response, &field)
             })()
             .await,
             anyhow!("Error get_artist"),
@@ -190,12 +185,7 @@ impl LmsClient {
             (|| async {
                 let (request, field) = LmsRequest::current_title(name);
                 let lms_response = self.post(&request).await?;
-                as_string(lms_response, &field).map(Some).or_else(|e| {
-                    match e.downcast_ref::<ResultError>() {
-                        Some(ResultError::NoField { .. }) => Ok(None),
-                        _ => Err(e),
-                    }
-                })
+                as_string_or_not_there(lms_response, &field)
             })()
             .await,
             anyhow!("Error get_current_title"),
@@ -209,12 +199,7 @@ impl LmsClient {
             (|| async {
                 let (request, field) = LmsRequest::album(name);
                 let lms_response = self.post(&request).await?;
-                as_string(lms_response, &field).map(Some).or_else(|e| {
-                    match e.downcast_ref::<ResultError>() {
-                        Some(ResultError::NoField { .. }) => Ok(None),
-                        _ => Err(e),
-                    }
-                })
+                as_string_or_not_there(lms_response, &field)
             })()
             .await,
             anyhow!("Error get_album"),
@@ -347,6 +332,15 @@ fn as_string(response: LmsResponse, field: &String) -> Result<String> {
         Value::String(s) => Ok(s.clone()),
         _ => bail!("Wrong top level type for string: {:?}", value),
     }
+}
+
+fn as_string_or_not_there(response: LmsResponse, field: &String) -> Result<Option<String>> {
+    as_string(response, &field)
+        .map(Some)
+        .or_else(|e| match e.downcast_ref::<ResultError>() {
+            Some(ResultError::NoField { .. }) => Ok(None),
+            _ => Err(e),
+        })
 }
 
 fn as_mode(response: LmsResponse, field: &String) -> Result<Mode> {
