@@ -57,8 +57,8 @@ impl LmsRequest {
         Self::new(name).question("artist".to_string())
     }
 
-    pub fn current_title(name: String) -> (Self, String) {
-        Self::new(name).question("current_title".to_string())
+    pub fn title(name: String) -> (Self, String) {
+        Self::new(name).question("title".to_string())
     }
 
     pub fn album(name: String) -> (Self, String) {

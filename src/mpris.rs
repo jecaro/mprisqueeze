@@ -201,9 +201,9 @@ impl MprisPlayer {
             .get_album(self.player_name.clone())
             .await
             .map_err(to_fdo_error)?;
-        let current_title = self
+        let title = self
             .client
-            .get_current_title(self.player_name.clone())
+            .get_title(self.player_name.clone())
             .await
             .map_err(to_fdo_error)?;
         let index = self
@@ -224,7 +224,7 @@ impl MprisPlayer {
         album.map(|album| {
             hm.insert("xesam:album".to_string(), album.into());
         });
-        current_title.map(|title| {
+        title.map(|title| {
             hm.insert("xesam:title".to_string(), title.into());
         });
         Ok(hm)

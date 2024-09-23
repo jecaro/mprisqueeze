@@ -180,15 +180,15 @@ impl LmsClient {
     }
 
     // Same remark as [`get_artist`]
-    pub async fn get_current_title(&self, name: String) -> Result<Option<String>> {
+    pub async fn get_title(&self, name: String) -> Result<Option<String>> {
         self.handle_error(
             (|| async {
-                let (request, field) = LmsRequest::current_title(name);
+                let (request, field) = LmsRequest::title(name);
                 let lms_response = self.post(&request).await?;
                 as_string_or_not_there(lms_response, &field)
             })()
             .await,
-            anyhow!("Error get_current_title"),
+            anyhow!("Error get_title"),
         )
         .await
     }
