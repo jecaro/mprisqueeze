@@ -191,14 +191,19 @@ impl MprisPlayer {
             debug!("MprisPlayer::metadata no track");
             return Ok(HashMap::new());
         }
-        let current_title = self
-            .client
-            .get_current_title(self.player_name.clone())
-            .await
-            .map_err(to_fdo_error)?;
         let artist = self
             .client
             .get_artist(self.player_name.clone())
+            .await
+            .map_err(to_fdo_error)?;
+        let album = self
+            .client
+            .get_album(self.player_name.clone())
+            .await
+            .map_err(to_fdo_error)?;
+        let current_title = self
+            .client
+            .get_current_title(self.player_name.clone())
             .await
             .map_err(to_fdo_error)?;
         let index = self
@@ -215,6 +220,9 @@ impl MprisPlayer {
         hm.insert("mpris:trackid".to_string(), op.into());
         artist.map(|artist| {
             hm.insert("xesam:artist".to_string(), vec![artist].into());
+        });
+        album.map(|album| {
+            hm.insert("xesam:album".to_string(), album.into());
         });
         current_title.map(|title| {
             hm.insert("xesam:title".to_string(), title.into());

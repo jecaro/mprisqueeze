@@ -61,6 +61,10 @@ impl LmsRequest {
         Self::new(name).question("current_title".to_string())
     }
 
+    pub fn album(name: String) -> (Self, String) {
+        Self::new(name).question("album".to_string())
+    }
+
     pub fn mode(name: String) -> (Self, String) {
         Self::new(name).question("mode".to_string())
     }

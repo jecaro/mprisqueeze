@@ -203,6 +203,25 @@ impl LmsClient {
         .await
     }
 
+    // ditto
+    pub async fn get_album(&self, name: String) -> Result<Option<String>> {
+        self.handle_error(
+            (|| async {
+                let (request, field) = LmsRequest::album(name);
+                let lms_response = self.post(&request).await?;
+                as_string(lms_response, &field).map(Some).or_else(|e| {
+                    match e.downcast_ref::<ResultError>() {
+                        Some(ResultError::NoField { .. }) => Ok(None),
+                        _ => Err(e),
+                    }
+                })
+            })()
+            .await,
+            anyhow!("Error get_album"),
+        )
+        .await
+    }
+
     pub async fn play(&self, name: String) -> Result<()> {
         self.handle_error(
             self.post_no_result(&LmsRequest::play(name)).await,
