@@ -14,6 +14,7 @@ use tokio::{net::UdpSocket, time::timeout};
 pub struct Reply {
     pub hostname: String,
     pub port: u16,
+    #[allow(dead_code)]
     pub uuid: String,
     pub version: String,
 }
