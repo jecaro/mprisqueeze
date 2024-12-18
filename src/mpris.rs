@@ -2,10 +2,10 @@ use crate::lms::{LmsClient, Mode, Shuffle};
 use log::{debug, info};
 use std::{collections::HashMap, convert::TryFrom, result};
 use zbus::{
-    fdo, interface,
+    connection, fdo, interface,
     zvariant::{ObjectPath, Value},
+    Connection,
 };
-use zbus::{Connection, ConnectionBuilder};
 
 /// Start the DBus server for a given player and expose an MPRIS interface for it. This interface
 /// is specified in [the MPRIS
@@ -20,7 +20,7 @@ pub async fn start_dbus_server(
         player_name: player_name.clone(),
     };
 
-    let connection = ConnectionBuilder::session()?
+    let connection = connection::Builder::session()?
         .name(format!("org.mpris.MediaPlayer2.{}", player_name))?
         .serve_at("/org/mpris/MediaPlayer2", MprisRoot {})?
         .serve_at("/org/mpris/MediaPlayer2", player)?
