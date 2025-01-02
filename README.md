@@ -1,6 +1,7 @@
 # mprisqueeze
 
 [![CI][status-png]][status]
+[![crates][crates-png]][crates]
 
 `mprisqueeze` is a wrapper over [squeezelite]. It starts [squeezelite] in the 
 background and exposes an [MPRIS] interface to control it with [MPRIS] clients 
@@ -66,9 +67,11 @@ start it manually:
 $ systemctl --user start mprisqueeze
 ```
 
-[status]: https://github.com/jecaro/mprisqueeze/actions
-[status-png]: https://github.com/jecaro/mprisqueeze/workflows/CI/badge.svg
-[MPRIS]: https://specifications.freedesktop.org/mpris-spec/latest/
-[squeezelite]: https://github.com/ralph-irving/squeezelite
-[playerctl]: https://github.com/altdesktop/playerctl
 [LMS]: https://github.com/Logitech/slimserver
+[MPRIS]: https://specifications.freedesktop.org/mpris-spec/latest/
+[crates-png]: https://img.shields.io/crates/v/mprisqueeze
+[crates]: https://crates.io/crates/mprisqueeze
+[playerctl]: https://github.com/altdesktop/playerctl
+[squeezelite]: https://github.com/ralph-irving/squeezelite
+[status-png]: https://github.com/jecaro/mprisqueeze/workflows/CI/badge.svg
+[status]: https://github.com/jecaro/mprisqueeze/actions
