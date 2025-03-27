@@ -38,19 +38,18 @@ impl LmsRequest {
         Self::new(id).question("connected".to_string())
     }
 
-    pub fn players() -> (Self, String) {
-        (
-            Self::new("".to_string())
-                .add_param("players".to_string())
-                .add_param("0".to_string()),
-            "players_loop".to_string(),
-        )
+    pub fn players() -> Self {
+        Self::new("".to_string())
+            .add_param("players".to_string())
+            .add_param("0".to_string())
     }
 
-    pub fn player_count() -> (Self, String) {
-        Self::new("".to_string())
-            .add_param("player".to_string())
-            .question("count".to_string())
+    pub fn players_loop() -> (Self, String) {
+        (Self::players(), "players_loop".to_string())
+    }
+
+    pub fn players_count() -> (Self, String) {
+        (Self::players(), "count".to_string())
     }
 
     pub fn artist(id: String) -> (Self, String) {

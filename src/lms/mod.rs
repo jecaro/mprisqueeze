@@ -89,7 +89,7 @@ impl LmsClient {
     pub async fn get_player_count(&self) -> Result<u64> {
         self.handle_error(
             (|| async {
-                let (request, field) = LmsRequest::player_count();
+                let (request, field) = LmsRequest::players_count();
                 let lms_response = self.post(&request).await?;
                 as_u64(lms_response, &field)
             })()
@@ -102,7 +102,7 @@ impl LmsClient {
     pub async fn get_players(&self) -> Result<Vec<Player>> {
         self.handle_error(
             (|| async {
-                let (request, field) = LmsRequest::players();
+                let (request, field) = LmsRequest::players_loop();
                 let lms_response = self.post(&request).await?;
                 let value = result_field(lms_response, &field)?.clone();
                 serde_json::from_value(value.to_owned()).map_err(|e| e.into())
