@@ -150,17 +150,18 @@ impl MprisPlayer {
     #[zbus(property)]
     async fn playback_status(&self) -> result::Result<String, fdo::Error> {
         debug!("MprisPlayer::playback_status");
-        let mode = self
-            .client
-            .get_mode(self.player_id.clone())
-            .await
-            .map_err(to_fdo_error)?;
-        Ok(match mode {
-            Mode::Play => "Playing",
-            Mode::Pause => "Paused",
-            Mode::Stop => "Stopped",
-        }
-        .to_string())
+        //let mode = self
+        //    .client
+        //    .get_mode(self.player_id.clone())
+        //    .await
+        //    .map_err(to_fdo_error)?;
+        //Ok(match mode {
+        //    Mode::Play => "Playing",
+        //    Mode::Pause => "Paused",
+        //    Mode::Stop => "Stopped",
+        //}
+        //.to_string())
+        Ok("Playing".to_string())
     }
     #[zbus(property)]
     async fn loop_status(&self) -> String {
