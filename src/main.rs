@@ -56,7 +56,8 @@ struct Options {
 }
 
 /// Wait for maximum `timeout` seconds for the player to be available
-async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) -> Result<()> {
+/// returns the player id
+async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) -> Result<String> {
     info!("Waiting for player {} to be available", player_name);
     let sleep = sleep(Duration::from_secs(timeout));
     pin!(sleep);
@@ -67,9 +68,9 @@ async fn wait_for_player(client: &LmsClient, player_name: &str, timeout: u64) ->
             {
                 if let Result::Ok(true) = count.as_ref().map(|count| *count != 0) {
                     let players = client.get_players().await?;
-                    if players.iter().any(|player| player.name == player_name) {
+                    if let Some(player) = players.into_iter().find(|player| player.name == player_name) {
                         info!("Player {} is available", player_name);
-                        break Ok(());
+                        break Ok(player.playerid);
                     }
                 }
                 count.map(|_| ())?
@@ -140,10 +141,11 @@ async fn main() -> Result<()> {
     let result: Result<()> = (|| async {
         // wait for the player to be available
         let (client, mut recv) = LmsClient::new(hostname, port);
-        wait_for_player(&client, &options.player_name, options.player_timeout).await?;
+        let player_id =
+            wait_for_player(&client, &options.player_name, options.player_timeout).await?;
 
         // start the MPRIS server
-        let _connection = start_dbus_server(client, options.player_name).await?;
+        let _connection = start_dbus_server(client, options.player_name, player_id).await?;
 
         select! {
             Some (error) = recv.recv() => bail!("Error from LMS: {:?}", error),

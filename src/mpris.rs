@@ -13,11 +13,13 @@ use zbus::{
 pub async fn start_dbus_server(
     client: LmsClient,
     player_name: String,
+    player_id: String,
 ) -> anyhow::Result<Connection> {
-    info!("Starting DBus server for player {}", player_name);
+    info!("Starting DBus server for player {}", player_id);
     let player = MprisPlayer {
         client,
         player_name: player_name.clone(),
+        player_id,
     };
 
     let connection = connection::Builder::session()?
@@ -82,6 +84,7 @@ impl MprisRoot {
 struct MprisPlayer {
     client: LmsClient,
     player_name: String,
+    player_id: String,
 }
 
 fn to_fdo_error(err: anyhow::Error) -> fdo::Error {
@@ -93,35 +96,35 @@ impl MprisPlayer {
     async fn next(&self) -> Result<(), fdo::Error> {
         debug!("MprisPlayer::next");
         self.client
-            .next(self.player_name.clone())
+            .next(self.player_id.clone())
             .await
             .map_err(to_fdo_error)
     }
     async fn previous(&self) -> Result<(), fdo::Error> {
         debug!("MprisPlayer::previous");
         self.client
-            .previous(self.player_name.clone())
+            .previous(self.player_id.clone())
             .await
             .map_err(to_fdo_error)
     }
     async fn pause(&self) -> Result<(), fdo::Error> {
         debug!("MprisPlayer::pause");
         self.client
-            .pause(self.player_name.clone())
+            .pause(self.player_id.clone())
             .await
             .map_err(to_fdo_error)
     }
     async fn play_pause(&self) -> Result<(), fdo::Error> {
         debug!("MprisPlayer::play_pause");
         self.client
-            .play_pause(self.player_name.clone())
+            .play_pause(self.player_id.clone())
             .await
             .map_err(to_fdo_error)
     }
     async fn stop(&self) -> Result<(), fdo::Error> {
         debug!("MprisPlayer::stop");
         self.client
-            .stop(self.player_name.clone())
+            .stop(self.player_id.clone())
             .await
             .map_err(to_fdo_error)
     }
@@ -129,7 +132,7 @@ impl MprisPlayer {
         debug!("MprisPlayer::play");
         let res = self
             .client
-            .play(self.player_name.clone())
+            .play(self.player_id.clone())
             .await
             .map_err(to_fdo_error);
         res
@@ -149,7 +152,7 @@ impl MprisPlayer {
         debug!("MprisPlayer::playback_status");
         let mode = self
             .client
-            .get_mode(self.player_name.clone())
+            .get_mode(self.player_id.clone())
             .await
             .map_err(to_fdo_error)?;
         Ok(match mode {
@@ -173,7 +176,7 @@ impl MprisPlayer {
         debug!("MprisPlayer::shuffle");
         let shuffle = self
             .client
-            .get_shuffle(self.player_name.clone())
+            .get_shuffle(self.player_id.clone())
             .await
             .map_err(to_fdo_error)?;
 
@@ -184,7 +187,7 @@ impl MprisPlayer {
         debug!("MprisPlayer::metadata");
         let track_count = self
             .client
-            .get_track_count(self.player_name.clone())
+            .get_track_count(self.player_id.clone())
             .await
             .map_err(to_fdo_error)?;
         if track_count == 0 {
@@ -193,22 +196,22 @@ impl MprisPlayer {
         }
         let artist = self
             .client
-            .get_artist(self.player_name.clone())
+            .get_artist(self.player_id.clone())
             .await
             .map_err(to_fdo_error)?;
         let album = self
             .client
-            .get_album(self.player_name.clone())
+            .get_album(self.player_id.clone())
             .await
             .map_err(to_fdo_error)?;
         let title = self
             .client
-            .get_title(self.player_name.clone())
+            .get_title(self.player_id.clone())
             .await
             .map_err(to_fdo_error)?;
         let index = self
             .client
-            .get_index(self.player_name.clone())
+            .get_index(self.player_id.clone())
             .await
             .map_err(to_fdo_error)?;
         let mut hm = HashMap::new();

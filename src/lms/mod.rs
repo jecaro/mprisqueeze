@@ -39,6 +39,7 @@ pub struct LmsClient {
 #[derive(Clone, Debug, Deserialize)]
 pub struct Player {
     pub name: String,
+    pub playerid: String,
 }
 
 impl LmsClient {

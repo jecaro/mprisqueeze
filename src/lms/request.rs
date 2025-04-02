@@ -11,10 +11,10 @@ pub struct LmsRequest {
 }
 
 impl LmsRequest {
-    fn new(name: String) -> Self {
+    fn new(id: String) -> Self {
         Self {
             method: "slim.request".to_string(),
-            params: (name, vec![]),
+            params: (id, vec![]),
         }
     }
 
@@ -34,8 +34,8 @@ impl LmsRequest {
         )
     }
 
-    pub fn connected(name: String) -> (Self, String) {
-        Self::new(name).question("connected".to_string())
+    pub fn connected(id: String) -> (Self, String) {
+        Self::new(id).question("connected".to_string())
     }
 
     pub fn players() -> (Self, String) {
@@ -53,64 +53,64 @@ impl LmsRequest {
             .question("count".to_string())
     }
 
-    pub fn artist(name: String) -> (Self, String) {
-        Self::new(name).question("artist".to_string())
+    pub fn artist(id: String) -> (Self, String) {
+        Self::new(id).question("artist".to_string())
     }
 
-    pub fn title(name: String) -> (Self, String) {
-        Self::new(name).question("title".to_string())
+    pub fn title(id: String) -> (Self, String) {
+        Self::new(id).question("title".to_string())
     }
 
-    pub fn album(name: String) -> (Self, String) {
-        Self::new(name).question("album".to_string())
+    pub fn album(id: String) -> (Self, String) {
+        Self::new(id).question("album".to_string())
     }
 
-    pub fn mode(name: String) -> (Self, String) {
-        Self::new(name).question("mode".to_string())
+    pub fn mode(id: String) -> (Self, String) {
+        Self::new(id).question("mode".to_string())
     }
 
-    fn playlist(name: String) -> Self {
-        Self::new(name).add_param("playlist".to_string())
+    fn playlist(id: String) -> Self {
+        Self::new(id).add_param("playlist".to_string())
     }
 
-    pub fn shuffle(name: String) -> (Self, String) {
-        Self::playlist(name).question("shuffle".to_string())
+    pub fn shuffle(id: String) -> (Self, String) {
+        Self::playlist(id).question("shuffle".to_string())
     }
 
-    pub fn index(name: String) -> (Self, String) {
-        Self::playlist(name).question("index".to_string())
+    pub fn index(id: String) -> (Self, String) {
+        Self::playlist(id).question("index".to_string())
     }
 
-    pub fn track_count(name: String) -> (Self, String) {
-        Self::playlist(name).question("tracks".to_string())
+    pub fn track_count(id: String) -> (Self, String) {
+        Self::playlist(id).question("tracks".to_string())
     }
 
-    pub fn play(name: String) -> Self {
-        Self::new(name).add_param("play".to_string())
+    pub fn play(id: String) -> Self {
+        Self::new(id).add_param("play".to_string())
     }
 
-    pub fn stop(name: String) -> Self {
-        Self::new(name).add_param("stop".to_string())
+    pub fn stop(id: String) -> Self {
+        Self::new(id).add_param("stop".to_string())
     }
 
-    pub fn pause(name: String) -> Self {
-        Self::new(name)
+    pub fn pause(id: String) -> Self {
+        Self::new(id)
             .add_param("pause".to_string())
             .add_param("1".to_string())
     }
 
-    pub fn play_pause(name: String) -> Self {
-        Self::new(name).add_param("pause".to_string())
+    pub fn play_pause(id: String) -> Self {
+        Self::new(id).add_param("pause".to_string())
     }
 
-    pub fn previous(name: String) -> Self {
-        Self::playlist(name)
+    pub fn previous(id: String) -> Self {
+        Self::playlist(id)
             .add_param("index".to_string())
             .add_param("-1".to_string())
     }
 
-    pub fn next(name: String) -> Self {
-        Self::playlist(name)
+    pub fn next(id: String) -> Self {
+        Self::playlist(id)
             .add_param("index".to_string())
             .add_param("+1".to_string())
     }
