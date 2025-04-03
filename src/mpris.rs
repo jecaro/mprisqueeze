@@ -219,7 +219,7 @@ impl MprisPlayer {
             "/org/mpris/MediaPlayer2/{0}/track/{index}",
             self.player_name
         ))
-        .unwrap();
+        .map_err(|err| to_fdo_error(err.into()))?;
         hm.insert("mpris:trackid".to_string(), op.into());
         artist.map(|artist| {
             hm.insert("xesam:artist".to_string(), vec![artist].into());
