@@ -15,6 +15,19 @@ mod discover;
 mod lms;
 mod mpris;
 
+/// Check the player name given on the command line. It should be possible to use it to create a
+/// dbus path hence it must conform to
+/// https://dbus.freedesktop.org/doc/dbus-specification.html#message-protocol-marshaling-object-path
+fn is_player_name_valid(s: &str) -> Result<String> {
+    if s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        Ok(s.to_string())
+    } else {
+        Err(anyhow!(
+            "Player name must only contain characters a-z, A-Z, 0-9 and _"
+        ))
+    }
+}
+
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 struct Options {
@@ -22,7 +35,13 @@ struct Options {
     hostname: Option<String>,
     #[arg(short = 'P', long, help = "LMS port", default_value_t = 9000)]
     port: u16,
-    #[arg(short, long, default_value = "SqueezeLite", help = "Player name")]
+    #[arg(
+        short,
+        long,
+        default_value = "SqueezeLite",
+        help = "Player name",
+        value_parser = is_player_name_valid
+    )]
     player_name: String,
     #[arg(
         short = 't',
