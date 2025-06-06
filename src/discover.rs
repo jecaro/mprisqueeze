@@ -4,8 +4,8 @@ use nom::{
     bytes::{self, complete::tag},
     combinator::{flat_map, map, map_res},
     number,
-    sequence::{preceded, tuple},
-    IResult,
+    sequence::preceded,
+    IResult, Parser,
 };
 use std::time::Duration;
 use tokio::{net::UdpSocket, time::timeout};
@@ -69,7 +69,8 @@ fn parse_tag<'a>(input: &'a [u8], start_tag: &str) -> IResult<&'a [u8], String> 
             flat_map(number::complete::be_u8, bytes::complete::take),
         ),
         |bytes: &[u8]| String::from_utf8(bytes.to_vec()),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn parse_hostname(input: &[u8]) -> IResult<&[u8], String> {
@@ -77,7 +78,7 @@ fn parse_hostname(input: &[u8]) -> IResult<&[u8], String> {
 }
 
 fn parse_port(input: &[u8]) -> IResult<&[u8], u16> {
-    map_res(|input| parse_tag(input, "JSON"), |s| s.parse::<u16>())(input)
+    map_res(|input| parse_tag(input, "JSON"), |s| s.parse::<u16>()).parse(input)
 }
 
 fn parse_uuid(input: &[u8]) -> IResult<&[u8], String> {
@@ -90,12 +91,13 @@ fn parse_version(input: &[u8]) -> IResult<&[u8], String> {
 
 fn parse_reply(input: &[u8]) -> IResult<&[u8], Reply> {
     map(
-        tuple((parse_hostname, parse_port, parse_uuid, parse_version)),
+        (parse_hostname, parse_port, parse_uuid, parse_version),
         |(hostname, port, uuid, version)| Reply {
             hostname,
             port,
             uuid,
             version,
         },
-    )(input)
+    )
+    .parse(input)
 }
