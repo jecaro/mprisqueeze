@@ -183,7 +183,7 @@ impl MprisPlayer {
         Ok(shuffle == Shuffle::Songs)
     }
     #[zbus(property)]
-    async fn metadata(&self) -> result::Result<HashMap<String, Value>, fdo::Error> {
+    async fn metadata(&self) -> result::Result<HashMap<String, Value<'_>>, fdo::Error> {
         debug!("MprisPlayer::metadata");
         let track_count = self
             .client
