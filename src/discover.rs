@@ -13,6 +13,7 @@ use tokio::{net::UdpSocket, time::timeout};
 #[derive(Debug)]
 pub struct Reply {
     pub hostname: String,
+    pub ip: std::net::IpAddr,
     pub port: u16,
     #[allow(dead_code)]
     pub uuid: String,
@@ -35,16 +36,21 @@ pub async fn discover(reply_timeout: Duration) -> Result<Reply> {
 
     let mut buf = [0; 1024];
 
+    let ip;
+
     loop {
         let response = timeout(reply_timeout, broasdcast_and_recv(&mut buf, &sock)).await;
         match response {
-            Ok(Ok(())) => break,
+            Ok(Ok(found_ip)) => {
+                ip = found_ip;
+                break;
+            }
             Ok(Err(e)) => return Err(e.into()),
             Err(_) => warn!("Timeout waiting for LMS reply, retrying..."),
         }
     }
 
-    parse_reply(&buf)
+    parse_reply(&buf, ip)
         .map(|(_, reply)| {
             info!(
                 "Found LMS server: {}:{} ({})",
@@ -55,11 +61,11 @@ pub async fn discover(reply_timeout: Duration) -> Result<Reply> {
         .map_err(|error| error.to_owned().into())
 }
 
-async fn broasdcast_and_recv(buf: &mut [u8], sock: &UdpSocket) -> Result<()> {
+async fn broasdcast_and_recv(buf: &mut [u8], sock: &UdpSocket) -> Result<std::net::IpAddr> {
     let message = "eNAME\0JSON\0UUID\0VERS\0".as_bytes();
     let _ = sock.send_to(&message, "255.255.255.255:3483").await?;
-    let _ = sock.recv(buf).await?;
-    Ok(())
+    let (_, src) = sock.recv_from(buf).await?;
+    Ok(src.ip())
 }
 
 fn parse_tag<'a>(input: &'a [u8], start_tag: &str) -> IResult<&'a [u8], String> {
@@ -89,7 +95,7 @@ fn parse_version(input: &[u8]) -> IResult<&[u8], String> {
     parse_tag(input, "VERS")
 }
 
-fn parse_reply(input: &[u8]) -> IResult<&[u8], Reply> {
+fn parse_reply(input: &[u8], ip: std::net::IpAddr) -> IResult<&[u8], Reply> {
     map(
         (parse_hostname, parse_port, parse_uuid, parse_version),
         |(hostname, port, uuid, version)| Reply {
@@ -97,6 +103,7 @@ fn parse_reply(input: &[u8]) -> IResult<&[u8], Reply> {
             port,
             uuid,
             version,
+            ip,
         },
     )
     .parse(input)
