@@ -152,30 +152,7 @@ async fn main() -> Result<()> {
 
             println!("Discovered LMS '{}' at {}:{}", reply.hostname, reply.ip, reply.port);
 
-            // Lookup the server "hostname" to see if it is actually a hostname, or just a library name
-
-            let server_ip = match tokio::net::lookup_host(reply.hostname.as_str()).await {
-                Result::Ok(mut addrs) => {
-                    if let Some(addr) = addrs.next() {
-                        addr.ip()
-                    } else {
-                        info!(
-                            "DNS lookup for server name '{}' returned no addresses, keeping discovered IP {}",
-                            reply.hostname, reply.ip
-                        );
-                        reply.ip.clone()
-                    }
-                }
-                Err(e) => {
-                    info!(
-                        "DNS lookup for server name '{}' failed: {}, keeping discovered IP {}",
-                        reply.hostname, e, reply.ip
-                    );
-                    reply.ip.clone()
-                }
-            };
-
-            (server_ip.to_string(), reply.port)
+            (reply.ip.to_string(), reply.port)
         }
     };
 
