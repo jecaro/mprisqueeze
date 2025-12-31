@@ -1,5 +1,5 @@
-use anyhow::{anyhow, bail, Ok, Result};
-use clap::{command, Parser};
+use anyhow::{Ok, Result, anyhow, bail};
+use clap::{Parser, command};
 use discover::discover;
 use lms::LmsClient;
 use log::{debug, info};
@@ -144,15 +144,13 @@ async fn main() -> Result<()> {
             ..
         } => (hostname.clone(), port),
         _ => {
-            let reply = timeout(
+            let (ip, reply) = timeout(
                 Duration::from_secs(options.discover_timeout),
                 discover(Duration::from_millis(options.discover_reply_timeout)),
             )
             .await??;
 
-            println!("Discovered LMS '{}' at {}:{}", reply.hostname, reply.ip, reply.port);
-
-            (reply.ip.to_string(), reply.port)
+            (ip.to_string(), reply.port)
         }
     };
 
