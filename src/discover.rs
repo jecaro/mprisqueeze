@@ -1,13 +1,13 @@
 use anyhow::Result;
 use log::{info, warn};
 use nom::{
+    IResult, Parser,
     bytes::{self, complete::tag},
     combinator::{flat_map, map, map_res},
     number,
     sequence::preceded,
-    IResult, Parser,
 };
-use std::time::Duration;
+use std::{net::IpAddr, time::Duration};
 use tokio::{net::UdpSocket, time::timeout};
 
 #[derive(Debug)]
@@ -16,50 +16,58 @@ pub struct Reply {
     pub port: u16,
     #[allow(dead_code)]
     pub uuid: String,
+    #[allow(dead_code)]
     pub version: String,
 }
 
 // The LMS server can be discovered by sending a broadcast UDP packet to port 3483.
+//
 // Example of answer from LMS
 // "ENAME\u{10}myhostnameJSON\u{4}9000UUID$e9b557b8-92e2-45cd-8a95-8730ffd604a5VERS\u{5}8.3.1"
 // '$' = 36 in the ASCII table
+//
 // Each value starts with a tag, followed by the length of the value in one byte, then the value
 // itself in the next length bytes.
+//
+// See the code of LMS for details:
+// https://github.com/LMS-Community/slimserver/blob/65aa473e029f2dec35b70c14d637d27867cddd11/Slim/Networking/Discovery.pm#L113-L127
 
 /// Discover the LMS server on the local network
-pub async fn discover(reply_timeout: Duration) -> Result<Reply> {
+pub async fn discover(reply_timeout: Duration) -> Result<(IpAddr, Reply)> {
     info!("Discovering LMS server on the local network");
 
     let sock = UdpSocket::bind("0.0.0.0:0").await?;
     sock.set_broadcast(true)?;
 
-    let mut buf = [0; 1024];
-
-    loop {
-        let response = timeout(reply_timeout, broasdcast_and_recv(&mut buf, &sock)).await;
+    let (ip, buffer) = loop {
+        let response = timeout(reply_timeout, broasdcast_and_recv(&sock)).await;
         match response {
-            Ok(Ok(())) => break,
+            Ok(Ok(ip_and_buffer)) => {
+                break ip_and_buffer;
+            }
             Ok(Err(e)) => return Err(e.into()),
             Err(_) => warn!("Timeout waiting for LMS reply, retrying..."),
         }
-    }
+    };
 
-    parse_reply(&buf)
+    parse_reply(&buffer)
         .map(|(_, reply)| {
             info!(
-                "Found LMS server: {}:{} ({})",
-                reply.hostname, reply.port, reply.version
+                "Discovered LMS '{}' at {}:{}",
+                reply.hostname, ip, reply.port
             );
-            reply
+
+            (ip, reply)
         })
         .map_err(|error| error.to_owned().into())
 }
 
-async fn broasdcast_and_recv(buf: &mut [u8], sock: &UdpSocket) -> Result<()> {
+async fn broasdcast_and_recv(sock: &UdpSocket) -> Result<(std::net::IpAddr, [u8; 1024])> {
+    let mut buffer = [0; 1024];
     let message = "eNAME\0JSON\0UUID\0VERS\0".as_bytes();
     let _ = sock.send_to(&message, "255.255.255.255:3483").await?;
-    let _ = sock.recv(buf).await?;
-    Ok(())
+    let (_, addr) = sock.recv_from(&mut buffer).await?;
+    Ok((addr.ip(), buffer))
 }
 
 fn parse_tag<'a>(input: &'a [u8], start_tag: &str) -> IResult<&'a [u8], String> {
