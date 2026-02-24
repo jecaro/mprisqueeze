@@ -1,36 +1,80 @@
 use crate::lms::{LmsClient, Mode, Shuffle};
 use log::{debug, info};
-use std::{collections::HashMap, convert::TryFrom, result};
+use std::{collections::HashMap, convert::TryFrom, result, time::Duration};
 use zbus::{
-    connection, fdo, interface,
+    Connection, connection, fdo, interface,
+    object_server::InterfaceRef,
     zvariant::{ObjectPath, Value},
-    Connection,
 };
 
 /// Start the DBus server for a given player and expose an MPRIS interface for it. This interface
 /// is specified in [the MPRIS
 /// documentation](https://specifications.freedesktop.org/mpris-spec/latest/).
+
 pub async fn start_dbus_server(
     client: LmsClient,
     player_name: String,
     player_id: String,
-) -> anyhow::Result<Connection> {
+) -> anyhow::Result<(Connection, InterfaceRef<MprisPlayer>)> {
     info!("Starting DBus server for player {}", player_id);
     let player = MprisPlayer {
-        client,
+        client: client.clone(),
         player_name: player_name.clone(),
-        player_id,
+        player_id: player_id.clone(),
     };
 
+    const MPRIS_OBJECT_PATH: &str = "/org/mpris/MediaPlayer2";
     let connection = connection::Builder::session()?
         .name(format!("org.mpris.MediaPlayer2.{}", player_name))?
-        .serve_at("/org/mpris/MediaPlayer2", MprisRoot {})?
-        .serve_at("/org/mpris/MediaPlayer2", player)?
+        .serve_at(MPRIS_OBJECT_PATH, MprisRoot {})?
+        .serve_at(MPRIS_OBJECT_PATH, player)?
         .build()
         .await?;
 
+    let object_path = ObjectPath::try_from(MPRIS_OBJECT_PATH)?;
+    let iface_ref = connection
+        .object_server()
+        .interface::<_, MprisPlayer>(&object_path)
+        .await?;
+
     info!("DBus server started for player {}", player_name);
-    Ok(connection)
+    Ok((connection, iface_ref))
+}
+
+/// Poll the LMS server for mode changes and emit PropertiesChanged signals
+pub async fn poll_for_mode_changes(
+    iface_ref: InterfaceRef<MprisPlayer>,
+    client: LmsClient,
+    player_id: String,
+) -> anyhow::Result<()> {
+    let mut last_mode: Option<Mode> = None;
+
+    loop {
+        tokio::time::sleep(Duration::from_millis(500)).await;
+
+        let current_mode = match client.get_mode(player_id.clone()).await {
+            Ok(mode) => mode,
+            // Errors are already reported via the LmsClient's error channel
+            Err(_) => continue,
+        };
+
+        let mode_changed = last_mode.as_ref() != Some(&current_mode);
+
+        if mode_changed {
+            info!(
+                "Mode changed to {:?}, emitting PropertiesChanged",
+                current_mode
+            );
+
+            last_mode = Some(current_mode);
+
+            // Emit the PropertiesChanged signal
+            let iface = iface_ref.get().await;
+            iface
+                .playback_status_changed(iface_ref.signal_emitter())
+                .await?;
+        }
+    }
 }
 
 struct MprisRoot {}
@@ -81,7 +125,7 @@ impl MprisRoot {
     }
 }
 
-struct MprisPlayer {
+pub struct MprisPlayer {
     client: LmsClient,
     player_name: String,
     player_id: String,
@@ -130,12 +174,10 @@ impl MprisPlayer {
     }
     async fn play(&self) -> Result<(), fdo::Error> {
         debug!("MprisPlayer::play");
-        let res = self
-            .client
+        self.client
             .play(self.player_id.clone())
             .await
-            .map_err(to_fdo_error);
-        res
+            .map_err(to_fdo_error)
     }
     async fn seek(&self, offset: i64) {
         debug!("MprisPlayer::seek {}", offset);

@@ -12,7 +12,7 @@ use tokio::sync::mpsc;
 
 mod request;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Mode {
     Stop,
     Play,
@@ -26,7 +26,7 @@ pub enum Shuffle {
     Albums,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LmsClient {
     /// The HTTP client
     client: Client,

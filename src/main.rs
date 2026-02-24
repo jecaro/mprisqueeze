@@ -3,7 +3,7 @@ use clap::Parser;
 use discover::discover;
 use lms::LmsClient;
 use log::{debug, info};
-use mpris::start_dbus_server;
+use mpris::{poll_for_mode_changes, start_dbus_server};
 use std::time::Duration;
 use tokio::{
     pin,
@@ -164,10 +164,19 @@ async fn main() -> Result<()> {
             wait_for_player(&client, &options.player_name, options.player_timeout).await?;
 
         // start the MPRIS server
-        let _connection = start_dbus_server(client, options.player_name, player_id).await?;
+        let (_connection, iface_ref) =
+            start_dbus_server(client.clone(), options.player_name, player_id.clone()).await?;
+
+        // Spawn a task to poll for mode changes and emit PropertiesChanged signals
+        let poll_handle =
+            tokio::spawn(async move { poll_for_mode_changes(iface_ref, client, player_id).await });
 
         select! {
-            Some (error) = recv.recv() => bail!("Error from LMS: {:?}", error),
+            Some(error) = recv.recv() => bail!("Error from LMS: {:?}", error),
+            result = poll_handle => {
+                result??;
+                bail!("Polling task exited unexpectedly")
+            }
             _ = player_process.wait() =>
             {
                 let exit_status = player_process.wait().await?;
