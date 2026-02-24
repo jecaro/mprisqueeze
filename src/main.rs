@@ -1,5 +1,5 @@
 use anyhow::{Ok, Result, anyhow, bail};
-use clap::{Parser, command};
+use clap::Parser;
 use discover::discover;
 use lms::LmsClient;
 use log::{debug, info};
