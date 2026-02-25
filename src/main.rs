@@ -3,7 +3,7 @@ use clap::Parser;
 use discover::discover;
 use lms::LmsClient;
 use log::{debug, info};
-use mpris::{poll_for_mode_changes, start_dbus_server};
+use mpris::{poll_for_changes, start_dbus_server};
 use std::time::Duration;
 use tokio::{
     pin,
@@ -169,7 +169,7 @@ async fn main() -> Result<()> {
 
         // Spawn a task to poll for mode changes and emit PropertiesChanged signals
         let poll_handle =
-            tokio::spawn(async move { poll_for_mode_changes(iface_ref, client, player_id).await });
+            tokio::spawn(async move { poll_for_changes(iface_ref, client, player_id).await });
 
         select! {
             Some(error) = recv.recv() => bail!("Error from LMS: {:?}", error),

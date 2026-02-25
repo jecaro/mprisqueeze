@@ -42,37 +42,46 @@ pub async fn start_dbus_server(
 }
 
 /// Poll the LMS server for mode changes and emit PropertiesChanged signals
-pub async fn poll_for_mode_changes(
+pub async fn poll_for_changes(
     iface_ref: InterfaceRef<MprisPlayer>,
     client: LmsClient,
     player_id: String,
 ) -> anyhow::Result<()> {
     let mut last_mode: Option<Mode> = None;
+    let mut last_title: Option<Option<String>> = None;
 
     loop {
         tokio::time::sleep(Duration::from_millis(500)).await;
 
+        // Poll for playback mode changes
         let current_mode = match client.get_mode(player_id.clone()).await {
             Ok(mode) => mode,
             // Errors are already reported via the LmsClient's error channel
             Err(_) => continue,
         };
 
-        let mode_changed = last_mode.as_ref() != Some(&current_mode);
-
-        if mode_changed {
-            info!(
-                "Mode changed to {:?}, emitting PropertiesChanged",
-                current_mode
-            );
-
+        if last_mode.as_ref() != Some(&current_mode) {
+            info!("Mode changed to {:?}", current_mode);
             last_mode = Some(current_mode);
 
-            // Emit the PropertiesChanged signal
             let iface = iface_ref.get().await;
             iface
                 .playback_status_changed(iface_ref.signal_emitter())
                 .await?;
+        }
+
+        // Poll for track changes by comparing title
+        let current_title = match client.get_title(player_id.clone()).await {
+            Ok(title) => title,
+            Err(_) => continue,
+        };
+
+        if last_title.as_ref() != Some(&current_title) {
+            info!("Track changed to {:?}", current_title);
+            last_title = Some(current_title);
+
+            let iface = iface_ref.get().await;
+            iface.metadata_changed(iface_ref.signal_emitter()).await?;
         }
     }
 }
