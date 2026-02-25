@@ -2,7 +2,7 @@
 //! created using the functions in the [request] module.
 use crate::lms::request::LmsRequest;
 use anyhow::bail;
-use anyhow::{anyhow, Ok, Result};
+use anyhow::{Ok, Result, anyhow};
 use log::debug;
 use reqwest::Client;
 use serde::Deserialize;
@@ -32,6 +32,10 @@ pub struct LmsClient {
     client: Client,
     /// The URL to reach the LMS server
     url: String,
+    /// The hostname of the LMS server
+    hostname: String,
+    /// The port of the LMS server
+    port: u16,
     /// The channel to report errors
     sender: mpsc::Sender<anyhow::Error>,
 }
@@ -52,9 +56,18 @@ impl LmsClient {
             Self {
                 client,
                 url,
+                hostname,
+                port,
                 sender,
             },
             receiver,
+        )
+    }
+
+    pub fn cover_art_url(&self, player_id: &str) -> String {
+        format!(
+            "http://{}:{}/music/current/cover.jpg?player={}",
+            self.hostname, self.port, player_id
         )
     }
 

@@ -281,6 +281,8 @@ impl MprisPlayer {
         title.map(|title| {
             hm.insert("xesam:title".to_string(), title.into());
         });
+        let cover_url = self.client.cover_art_url(&self.player_id);
+        hm.insert("mpris:artUrl".to_string(), cover_url.into());
         Ok(hm)
     }
     #[zbus(property)]
