@@ -1,12 +1,19 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
     naersk.url = "github:nix-community/naersk";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
   };
 
-  outputs = { self, flake-utils, naersk, nixpkgs }:
+  outputs = { self, naersk, nixpkgs }:
     let
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+
+      forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: f system);
+
+      nixpkgsFor = forAllSystems (system: import nixpkgs {
+        inherit system;
+      });
+
       derivation = pkgs:
         let naersk' = pkgs.callPackage naersk { };
         in
@@ -16,35 +23,29 @@
         };
 
     in
-    flake-utils.lib.eachDefaultSystem
-      (system:
-        let
-          pkgs = (import nixpkgs) {
-            inherit system;
-          };
+    {
+      devShell = forAllSystems (system:
+        let pkgs = nixpkgsFor.${system};
+        in pkgs.mkShell {
+          packages = [
+            pkgs.cargo
+            pkgs.cargo-edit
+            pkgs.rust-analyzer
+            pkgs.rustc
+            pkgs.rustfmt
+            pkgs.squeezelite-pulse
+          ];
+        });
 
-        in
-        {
-          # For `nix build` & `nix run`:
-          packages.default = derivation pkgs;
-
-          # For `nix develop`:
-          devShells.default = pkgs.mkShell {
-            nativeBuildInputs = with pkgs;
-              [
-                cargo
-                cargo-edit
-                rust-analyzer
-                rustc
-                rustfmt
-                squeezelite-pulse
-              ];
-          };
+      packages = forAllSystems (system:
+        let pkgs = nixpkgsFor.${system};
+        in {
+          default = derivation pkgs;
         }
-      ) // {
-      overlay = final: prev:
-        {
-          mprisqueeze = derivation final;
-        };
+      );
+
+      overlay = final: prev: {
+        mprisqueeze = derivation final;
+      };
     };
 }
